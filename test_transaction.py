@@ -26,16 +26,18 @@
 import threading
 import unittest
 from .testutils import ConnectingTestCase, skip_before_postgres, slow
-from .testutils import skip_if_crdb
 
 import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_SERIALIZABLE, STATUS_BEGIN, STATUS_READY
+from psycopg2.extensions import (
+    ISOLATION_LEVEL_SERIALIZABLE,
+    STATUS_BEGIN,
+    STATUS_READY,
+)
 
 
 class TransactionTests(ConnectingTestCase):
     def setUp(self):
         ConnectingTestCase.setUp(self)
-        skip_if_crdb("isolation level", self.conn)
         self.conn.set_isolation_level(ISOLATION_LEVEL_SERIALIZABLE)
         curs = self.conn.cursor()
         curs.execute(
@@ -106,7 +108,6 @@ class DeadlockSerializationTests(ConnectingTestCase):
 
     def setUp(self):
         ConnectingTestCase.setUp(self)
-        skip_if_crdb("isolation level", self.conn)
 
         curs = self.conn.cursor()
         # Drop table if it already exists
@@ -249,7 +250,9 @@ class QueryCancellationTests(ConnectingTestCase):
         # Set a low statement timeout, then sleep for a longer period.
         curs.execute("SET statement_timeout TO 10")
         self.assertRaises(
-            psycopg2.extensions.QueryCanceledError, curs.execute, "SELECT pg_sleep(50)"
+            psycopg2.extensions.QueryCanceledError,
+            curs.execute,
+            "SELECT pg_sleep(50)",
         )
 
 

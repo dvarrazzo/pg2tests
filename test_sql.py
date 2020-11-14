@@ -30,7 +30,6 @@ from .testutils import (
     skip_before_postgres,
     skip_copy_if_green,
     StringIO,
-    skip_if_crdb,
 )
 
 import psycopg2
@@ -171,7 +170,6 @@ class SqlFormatTests(ConnectingTestCase):
         cur.execute("select * from test_compose")
         self.assertEqual(cur.fetchall(), [(10, "a", "b", "c"), (20, "d", "e", "f")])
 
-    @skip_if_crdb("copy")
     @skip_copy_if_green
     @skip_before_postgres(8, 2)
     def test_copy(self):
@@ -247,7 +245,8 @@ class IdentifierTests(ConnectingTestCase):
             sql.Identifier("foo", "bar").as_string(self.conn), '"foo"."bar"'
         )
         self.assertEqual(
-            sql.Identifier("fo'o", 'ba"r').as_string(self.conn), '"fo\'o"."ba""r"'
+            sql.Identifier("fo'o", 'ba"r').as_string(self.conn),
+            '"fo\'o"."ba""r"',
         )
 
     def test_join(self):
@@ -274,7 +273,8 @@ class LiteralTests(ConnectingTestCase):
         self.assertQuotedEqual(sql.Literal("foo").as_string(self.conn), "'foo'")
         self.assertEqual(sql.Literal(42).as_string(self.conn), "42")
         self.assertEqual(
-            sql.Literal(dt.date(2017, 1, 1)).as_string(self.conn), "'2017-01-01'::date"
+            sql.Literal(dt.date(2017, 1, 1)).as_string(self.conn),
+            "'2017-01-01'::date",
         )
 
     def test_eq(self):

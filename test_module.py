@@ -35,7 +35,6 @@ from .testutils import (
     skip_before_postgres,
     ConnectingTestCase,
     skip_copy_if_green,
-    skip_if_crdb,
     slow,
     StringIO,
 )
@@ -237,7 +236,6 @@ class ExceptionsTestCase(ConnectingTestCase):
         gc.collect()
         assert w() is None
 
-    @skip_if_crdb("copy")
     @skip_copy_if_green
     def test_diagnostics_copy(self):
         f = StringIO()
@@ -266,7 +264,6 @@ class ExceptionsTestCase(ConnectingTestCase):
         self.assertEqual(diag1.sqlstate, "42601")
         self.assertEqual(diag2.sqlstate, "42P01")
 
-    @skip_if_crdb("deferrable")
     def test_diagnostics_from_commit(self):
         cur = self.conn.cursor()
         cur.execute(
@@ -284,7 +281,6 @@ class ExceptionsTestCase(ConnectingTestCase):
             e = exc
         self.assertEqual(e.diag.sqlstate, "23503")
 
-    @skip_if_crdb("diagnostic")
     @skip_before_postgres(9, 3)
     def test_9_3_diagnostics(self):
         cur = self.conn.cursor()
@@ -327,7 +323,6 @@ class ExceptionsTestCase(ConnectingTestCase):
         self.assertEqual(e.pgcode, e1.pgcode)
         self.assert_(e1.cursor is None)
 
-    @skip_if_crdb("connect any db")
     def test_pickle_connection_error(self):
         # segfaults on psycopg 2.5.1 - see ticket #170
         try:

@@ -25,7 +25,7 @@
 
 from . import testutils
 import unittest
-from .testutils import ConnectingTestCase, skip_if_crdb, unichr, PY2
+from .testutils import ConnectingTestCase, unichr, PY2
 
 import psycopg2
 import psycopg2.extensions
@@ -72,7 +72,8 @@ class QuotingTestCase(ConnectingTestCase):
             curs.execute("SELECT %s", (data,))
         except ValueError as e:
             self.assertEquals(
-                str(e), "A string literal cannot contain NUL (0x00) characters."
+                str(e),
+                "A string literal cannot contain NUL (0x00) characters.",
             )
         else:
             self.fail("ValueError not raised")
@@ -112,7 +113,10 @@ class QuotingTestCase(ConnectingTestCase):
         to escape into, 'quotes', \u20ac euro sign and \\ a backslash too.
         """
         data += u"".join(
-            map(unichr, [u for u in range(1, 65536) if not 0xD800 <= u <= 0xDFFF])
+            map(
+                unichr,
+                [u for u in range(1, 65536) if not 0xD800 <= u <= 0xDFFF],
+            )
         )  # surrogate area
         self.conn.set_client_encoding("UNICODE")
 
@@ -123,7 +127,6 @@ class QuotingTestCase(ConnectingTestCase):
         self.assertEqual(res, data)
         self.assert_(not self.conn.notices)
 
-    @skip_if_crdb("encoding")
     def test_latin1(self):
         self.conn.set_client_encoding("LATIN1")
         curs = self.conn.cursor()
@@ -148,7 +151,6 @@ class QuotingTestCase(ConnectingTestCase):
             self.assertEqual(res, data)
             self.assert_(not self.conn.notices)
 
-    @skip_if_crdb("encoding")
     def test_koi8(self):
         self.conn.set_client_encoding("KOI8")
         curs = self.conn.cursor()

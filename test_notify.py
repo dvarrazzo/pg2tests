@@ -29,7 +29,7 @@ from collections import deque
 import psycopg2
 from psycopg2 import extensions
 from psycopg2.extensions import Notify
-from .testutils import ConnectingTestCase, skip_if_crdb, slow
+from .testutils import ConnectingTestCase, slow
 from .testconfig import dsn
 
 import sys
@@ -38,7 +38,6 @@ import select
 from subprocess import Popen, PIPE
 
 
-@skip_if_crdb("notify")
 class NotifiesTests(ConnectingTestCase):
     def autocommit(self, conn):
         """Set a connection in autocommit mode."""
@@ -208,7 +207,12 @@ conn.close()
         self.assertEqual((pid, channel), (42, "bar"))
 
     def test_compare(self):
-        data = [(10, "foo"), (20, "foo"), (10, "foo", "bar"), (10, "foo", "baz")]
+        data = [
+            (10, "foo"),
+            (20, "foo"),
+            (10, "foo", "bar"),
+            (10, "foo", "baz"),
+        ]
         for d1 in data:
             for d2 in data:
                 n1 = psycopg2.extensions.Notify(*d1)

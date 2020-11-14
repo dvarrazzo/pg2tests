@@ -35,8 +35,6 @@ from .testutils import (
     slow,
     skip_from_python,
     restore_types,
-    skip_if_crdb,
-    crdb_version,
 )
 
 import psycopg2
@@ -162,7 +160,6 @@ class TypesExtrasTests(ConnectingTestCase):
 
 def skip_if_no_hstore(f):
     @wraps(f)
-    @skip_if_crdb("hstore")
     def skip_if_no_hstore_(self):
         oids = HstoreAdapter.get_oids(self.conn)
         if oids is None or not oids[0]:
@@ -447,7 +444,6 @@ class HstoreTestCase(ConnectingTestCase):
 
 def skip_if_no_composite(f):
     @wraps(f)
-    @skip_if_crdb("composite")
     def skip_if_no_composite_(self):
         if self.conn.info.server_version < 80000:
             return self.skipTest(
@@ -499,13 +495,19 @@ class AdaptTypeTestCase(ConnectingTestCase):
 
         ok("(,)", [None, None])
         ok('(,"")', [None, ""])
-        ok("(hello,,10.234,2010-11-11)", ["hello", None, "10.234", "2010-11-11"])
+        ok(
+            "(hello,,10.234,2010-11-11)",
+            ["hello", None, "10.234", "2010-11-11"],
+        )
         ok('(10,"""")', ["10", '"'])
         ok('(10,",")', ["10", ","])
         ok(r'(10,"\\")', ["10", "\\"])
         ok(r'''(10,"\\',""")''', ["10", '''\\',"'''])
         ok('(10,"(20,""(30,40)"")")', ["10", '(20,"(30,40)")'])
-        ok('(10,"(20,""(30,""""(40,50)"""")"")")', ["10", '(20,"(30,""(40,50)"")")'])
+        ok(
+            '(10,"(20,""(30,""""(40,50)"""")"")")',
+            ["10", '(20,"(30,""(40,50)"")")'],
+        )
         ok('(,"(,""(a\nb\tc)"")")', [None, '(,"(a\nb\tc)")'])
         ok(
             '(\x01,\x02,\x03,\x04,\x05,\x06,\x07,\x08,"\t","\n","\x0b",'
@@ -528,7 +530,8 @@ class AdaptTypeTestCase(ConnectingTestCase):
     @skip_if_no_composite
     def test_cast_composite(self):
         oid = self._create_type(
-            "type_isd", [("anint", "integer"), ("astring", "text"), ("adate", "date")]
+            "type_isd",
+            [("anint", "integer"), ("astring", "text"), ("adate", "date")],
         )
 
         t = psycopg2.extras.register_composite("type_isd", self.conn)
@@ -665,7 +668,8 @@ class AdaptTypeTestCase(ConnectingTestCase):
     @skip_before_postgres(8, 4)
     def test_composite_array(self):
         self._create_type(
-            "type_isd", [("anint", "integer"), ("astring", "text"), ("adate", "date")]
+            "type_isd",
+            [("anint", "integer"), ("astring", "text"), ("adate", "date")],
         )
 
         t = psycopg2.extras.register_composite("type_isd", self.conn)
@@ -775,7 +779,8 @@ class AdaptTypeTestCase(ConnectingTestCase):
     @skip_if_no_composite
     def test_subclass(self):
         oid = self._create_type(
-            "type_isd", [("anint", "integer"), ("astring", "text"), ("adate", "date")]
+            "type_isd",
+            [("anint", "integer"), ("astring", "text"), ("adate", "date")],
         )
 
         class DictComposite(CompositeCaster):
@@ -839,10 +844,17 @@ def skip_if_no_json_type(f):
     return skip_if_no_json_type_
 
 
-@skip_if_crdb("json")
 class JsonTestCase(ConnectingTestCase):
     def test_adapt(self):
-        objs = [None, "te'xt", 123, 123.45, u"\xe0\u20ac", ["a", 100], {"a": 100}]
+        objs = [
+            None,
+            "te'xt",
+            123,
+            123.45,
+            u"\xe0\u20ac",
+            ["a", 100],
+            {"a": 100},
+        ]
 
         curs = self.conn.cursor()
         for obj in enumerate(objs):
@@ -1053,9 +1065,8 @@ class JsonbTestCase(ConnectingTestCase):
         curs.execute("""select '{"a": 100.0, "b": null}'::jsonb""")
         self.assertEqual(curs.fetchone()[0], {"a": 100.0, "b": None})
 
-        if crdb_version(self.conn) is None:
-            curs.execute("""select array['{"a": 100.0, "b": null}']::jsonb[]""")
-            self.assertEqual(curs.fetchone()[0], [{"a": 100.0, "b": None}])
+        curs.execute("""select array['{"a": 100.0, "b": null}']::jsonb[]""")
+        self.assertEqual(curs.fetchone()[0], [{"a": 100.0, "b": None}])
 
     def test_register_on_connection(self):
         psycopg2.extras.register_json(self.conn, loads=self.myloads, name="jsonb")
@@ -1090,12 +1101,11 @@ class JsonbTestCase(ConnectingTestCase):
         data = curs.fetchone()[0]
         self.assert_(isinstance(data["a"], Decimal))
         self.assertEqual(data["a"], Decimal("100.0"))
-        # sure we are not mangling json too?
-        if crdb_version(self.conn) is None:
-            curs.execute("""select '{"a": 100.0, "b": null}'::json""")
-            data = curs.fetchone()[0]
-            self.assert_(isinstance(data["a"], float))
-            self.assertEqual(data["a"], 100.0)
+        # sure we are not manling json too?
+        curs.execute("""select '{"a": 100.0, "b": null}'::json""")
+        data = curs.fetchone()[0]
+        self.assert_(isinstance(data["a"], float))
+        self.assertEqual(data["a"], 100.0)
 
     def test_register_default(self):
         curs = self.conn.cursor()
@@ -1110,19 +1120,17 @@ class JsonbTestCase(ConnectingTestCase):
         self.assert_(isinstance(data["a"], Decimal))
         self.assertEqual(data["a"], Decimal("100.0"))
 
-        if crdb_version(self.conn) is None:
-            curs.execute("""select array['{"a": 100.0, "b": null}']::jsonb[]""")
-            data = curs.fetchone()[0]
-            self.assert_(isinstance(data[0]["a"], Decimal))
-            self.assertEqual(data[0]["a"], Decimal("100.0"))
+        curs.execute("""select array['{"a": 100.0, "b": null}']::jsonb[]""")
+        data = curs.fetchone()[0]
+        self.assert_(isinstance(data[0]["a"], Decimal))
+        self.assertEqual(data[0]["a"], Decimal("100.0"))
 
     def test_null(self):
         curs = self.conn.cursor()
         curs.execute("""select NULL::jsonb""")
         self.assertEqual(curs.fetchone()[0], None)
-        if crdb_version(self.conn) is None:
-            curs.execute("""select NULL::jsonb[]""")
-            self.assertEqual(curs.fetchone()[0], None)
+        curs.execute("""select NULL::jsonb[]""")
+        self.assertEqual(curs.fetchone()[0], None)
 
 
 class RangeTestCase(unittest.TestCase):
@@ -1395,7 +1403,6 @@ class RangeTestCase(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-@skip_if_crdb("range")
 @skip_before_postgres(9, 2, "range not supported before postgres 9.2")
 class RangeCasterTestCase(ConnectingTestCase):
 
@@ -1677,7 +1684,11 @@ class RangeCasterTestCase(ConnectingTestCase):
     def test_range_not_found(self):
         cur = self.conn.cursor()
         self.assertRaises(
-            psycopg2.ProgrammingError, register_range, "nosuchrange", "FailRange", cur
+            psycopg2.ProgrammingError,
+            register_range,
+            "nosuchrange",
+            "FailRange",
+            cur,
         )
 
     @restore_types
@@ -1703,7 +1714,11 @@ class RangeCasterTestCase(ConnectingTestCase):
         cur.execute("rollback to savepoint x;")
 
         self.assertRaises(
-            psycopg2.ProgrammingError, register_range, "rs.r1", "FailRange", cur
+            psycopg2.ProgrammingError,
+            register_range,
+            "rs.r1",
+            "FailRange",
+            cur,
         )
         cur.execute("rollback to savepoint x;")
 

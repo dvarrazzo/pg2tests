@@ -37,16 +37,13 @@ from .testutils import (
     skip_before_postgres,
     ConnectingTestCase,
     skip_if_green,
-    skip_if_crdb,
     slow,
 )
 
 
-def skip_if_no_lo(f):
-    f = skip_before_postgres(8, 1, "large objects only supported from PG 8.1")(f)
-    f = skip_if_green("libpq doesn't support LO in async mode")(f)
-    f = skip_if_crdb("large objects")(f)
-    return f
+skip_if_no_lo = skip_before_postgres(8, 1, "large objects only supported from PG 8.1")
+
+skip_lo_if_green = skip_if_green("libpq doesn't support LO in async mode")
 
 
 class LargeObjectTestCase(ConnectingTestCase):
@@ -75,6 +72,7 @@ class LargeObjectTestCase(ConnectingTestCase):
 
 
 @skip_if_no_lo
+@skip_lo_if_green
 class LargeObjectTests(LargeObjectTestCase):
     def test_create(self):
         lo = self.conn.lobject()
@@ -417,6 +415,7 @@ def skip_if_no_truncate(f):
 
 
 @skip_if_no_lo
+@skip_lo_if_green
 @skip_if_no_truncate
 class LargeObjectTruncateTests(LargeObjectTestCase):
     def test_truncate(self):
@@ -483,6 +482,7 @@ def skip_if_no_lo64(f):
 
 
 @skip_if_no_lo
+@skip_lo_if_green
 @skip_if_no_truncate
 @skip_if_no_lo64
 class LargeObject64Tests(LargeObjectTestCase):
@@ -510,6 +510,7 @@ def skip_if_lo64(f):
 
 
 @skip_if_no_lo
+@skip_lo_if_green
 @skip_if_no_truncate
 @skip_if_lo64
 class LargeObjectNot64Tests(LargeObjectTestCase):
@@ -517,7 +518,11 @@ class LargeObjectNot64Tests(LargeObjectTestCase):
         lo = self.conn.lobject()
         offset = 1 << 32  # 4gb
         self.assertRaises(
-            (OverflowError, psycopg2.InterfaceError, psycopg2.NotSupportedError),
+            (
+                OverflowError,
+                psycopg2.InterfaceError,
+                psycopg2.NotSupportedError,
+            ),
             lo.seek,
             offset,
             0,
@@ -527,7 +532,11 @@ class LargeObjectNot64Tests(LargeObjectTestCase):
         lo = self.conn.lobject()
         length = 1 << 32  # 4gb
         self.assertRaises(
-            (OverflowError, psycopg2.InterfaceError, psycopg2.NotSupportedError),
+            (
+                OverflowError,
+                psycopg2.InterfaceError,
+                psycopg2.NotSupportedError,
+            ),
             lo.truncate,
             length,
         )

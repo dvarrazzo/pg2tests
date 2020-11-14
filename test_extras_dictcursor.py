@@ -31,8 +31,6 @@ from .testutils import (
     skip_before_postgres,
     skip_before_python,
     skip_from_python,
-    crdb_version,
-    skip_if_crdb,
 )
 
 
@@ -40,8 +38,6 @@ class _DictCursorBase(ConnectingTestCase):
     def setUp(self):
         ConnectingTestCase.setUp(self)
         curs = self.conn.cursor()
-        if crdb_version(self.conn) is not None:
-            curs.execute("SET experimental_enable_temp_tables = 'on'")
         curs.execute("CREATE TEMPORARY TABLE ExtrasDictCursorTests (foo text)")
         curs.execute("INSERT INTO ExtrasDictCursorTests VALUES ('bar')")
         self.conn.commit()
@@ -70,7 +66,6 @@ class _DictCursorBase(ConnectingTestCase):
 class ExtrasDictCursorTests(_DictCursorBase):
     """Test if DictCursor extension class works."""
 
-    @skip_if_crdb("named cursor")
     def testDictConnCursorArgs(self):
         self.conn.close()
         self.conn = self.connect(connection_factory=psycopg2.extras.DictConnection)
@@ -139,19 +134,16 @@ class ExtrasDictCursorTests(_DictCursorBase):
 
         self._testWithNamedCursor(getter)
 
-    @skip_if_crdb("named cursor")
     @skip_before_postgres(8, 2)
     def testDictCursorWithNamedCursorNotGreedy(self):
         curs = self.conn.cursor("tmp", cursor_factory=psycopg2.extras.DictCursor)
         self._testNamedCursorNotGreedy(curs)
 
-    @skip_if_crdb("named cursor")
     @skip_before_postgres(8, 0)
     def testDictCursorWithNamedCursorIterRowNumber(self):
         curs = self.conn.cursor("tmp", cursor_factory=psycopg2.extras.DictCursor)
         self._testIterRowNumber(curs)
 
-    @skip_if_crdb("named cursor")
     def _testWithNamedCursor(self, getter):
         curs = self.conn.cursor("aname", cursor_factory=psycopg2.extras.DictCursor)
         curs.execute("SELECT * FROM ExtrasDictCursorTests")
@@ -242,7 +234,8 @@ class ExtrasDictCursorTests(_DictCursorBase):
         self.assertEqual(list(r.iterkeys()), ["foo", "bar", "baz", "qux"])
         self.assertEqual(list(r.itervalues()), [5, 4, 33, 2])
         self.assertEqual(
-            list(r.iteritems()), [("foo", 5), ("bar", 4), ("baz", 33), ("qux", 2)]
+            list(r.iteritems()),
+            [("foo", 5), ("bar", 4), ("baz", 33), ("qux", 2)],
         )
 
         r1 = pickle.loads(pickle.dumps(r))
@@ -331,19 +324,16 @@ class ExtrasDictCursorRealTests(_DictCursorBase):
 
         self._testWithNamedCursorReal(getter)
 
-    @skip_if_crdb("named cursor")
     @skip_before_postgres(8, 2)
     def testDictCursorRealWithNamedCursorNotGreedy(self):
         curs = self.conn.cursor("tmp", cursor_factory=psycopg2.extras.RealDictCursor)
         self._testNamedCursorNotGreedy(curs)
 
-    @skip_if_crdb("named cursor")
     @skip_before_postgres(8, 0)
     def testDictCursorRealWithNamedCursorIterRowNumber(self):
         curs = self.conn.cursor("tmp", cursor_factory=psycopg2.extras.RealDictCursor)
         self._testIterRowNumber(curs)
 
-    @skip_if_crdb("named cursor")
     def _testWithNamedCursorReal(self, getter):
         curs = self.conn.cursor("aname", cursor_factory=psycopg2.extras.RealDictCursor)
         curs.execute("SELECT * FROM ExtrasDictCursorTests")
@@ -406,7 +396,8 @@ class ExtrasDictCursorRealTests(_DictCursorBase):
         self.assertEqual(list(r.iterkeys()), ["foo", "bar", "baz", "qux"])
         self.assertEqual(list(r.itervalues()), [5, 4, 33, 2])
         self.assertEqual(
-            list(r.iteritems()), [("foo", 5), ("bar", 4), ("baz", 33), ("qux", 2)]
+            list(r.iteritems()),
+            [("foo", 5), ("bar", 4), ("baz", 33), ("qux", 2)],
         )
 
         r1 = pickle.loads(pickle.dumps(r))
@@ -449,15 +440,12 @@ class NamedTupleCursorTest(ConnectingTestCase):
 
         self.conn = self.connect(connection_factory=NamedTupleConnection)
         curs = self.conn.cursor()
-        if crdb_version(self.conn) is not None:
-            curs.execute("SET experimental_enable_temp_tables = 'on'")
         curs.execute("CREATE TEMPORARY TABLE nttest (i int, s text)")
         curs.execute("INSERT INTO nttest VALUES (1, 'foo')")
         curs.execute("INSERT INTO nttest VALUES (2, 'bar')")
         curs.execute("INSERT INTO nttest VALUES (3, 'baz')")
         self.conn.commit()
 
-    @skip_if_crdb("named cursor")
     def test_cursor_args(self):
         cur = self.conn.cursor("foo", cursor_factory=psycopg2.extras.DictCursor)
         self.assertEqual(cur.name, "foo")
@@ -614,7 +602,6 @@ class NamedTupleCursorTest(ConnectingTestCase):
         finally:
             NamedTupleCursor._make_nt = f_orig
 
-    @skip_if_crdb("named cursor")
     @skip_before_postgres(8, 0)
     def test_named(self):
         curs = self.conn.cursor("tmp")
@@ -625,28 +612,24 @@ class NamedTupleCursorTest(ConnectingTestCase):
         recs.extend(curs.fetchall())
         self.assertEqual(list(range(10)), [t.i for t in recs])
 
-    @skip_if_crdb("named cursor")
     def test_named_fetchone(self):
         curs = self.conn.cursor("tmp")
         curs.execute("""select 42 as i""")
         t = curs.fetchone()
         self.assertEqual(t.i, 42)
 
-    @skip_if_crdb("named cursor")
     def test_named_fetchmany(self):
         curs = self.conn.cursor("tmp")
         curs.execute("""select 42 as i""")
         recs = curs.fetchmany(10)
         self.assertEqual(recs[0].i, 42)
 
-    @skip_if_crdb("named cursor")
     def test_named_fetchall(self):
         curs = self.conn.cursor("tmp")
         curs.execute("""select 42 as i""")
         recs = curs.fetchall()
         self.assertEqual(recs[0].i, 42)
 
-    @skip_if_crdb("named cursor")
     @skip_before_postgres(8, 2)
     def test_not_greedy(self):
         curs = self.conn.cursor("tmp")
@@ -661,7 +644,6 @@ class NamedTupleCursorTest(ConnectingTestCase):
         self.assert_(recs[1].ts - recs[0].ts < timedelta(seconds=0.005))
         self.assert_(recs[2].ts - recs[1].ts > timedelta(seconds=0.0099))
 
-    @skip_if_crdb("named cursor")
     @skip_before_postgres(8, 0)
     def test_named_rownumber(self):
         curs = self.conn.cursor("tmp")

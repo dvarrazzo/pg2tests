@@ -28,7 +28,6 @@ import sys
 import string
 import unittest
 from .testutils import ConnectingTestCase, skip_before_postgres, slow, StringIO
-from .testutils import skip_if_crdb
 from itertools import cycle
 from subprocess import Popen, PIPE
 
@@ -68,7 +67,6 @@ class CopyTests(ConnectingTestCase):
         self._create_temp_table()
 
     def _create_temp_table(self):
-        skip_if_crdb("copy", self.conn)
         curs = self.conn.cursor()
         curs.execute(
             """
@@ -92,7 +90,10 @@ class CopyTests(ConnectingTestCase):
         curs = self.conn.cursor()
         try:
             self._copy_from(
-                curs, nrecs=10 * 1024, srec=10 * 1024, copykw={"size": 20 * 1024 * 1024}
+                curs,
+                nrecs=10 * 1024,
+                srec=10 * 1024,
+                copykw={"size": 20 * 1024 * 1024},
             )
         finally:
             curs.close()
@@ -122,7 +123,11 @@ class CopyTests(ConnectingTestCase):
             yield "id"
 
         self.assertRaises(
-            ZeroDivisionError, curs.copy_from, MinimalRead(f), "tcopy", columns=cols()
+            ZeroDivisionError,
+            curs.copy_from,
+            MinimalRead(f),
+            "tcopy",
+            columns=cols(),
         )
 
     @slow
@@ -306,29 +311,12 @@ class CopyTests(ConnectingTestCase):
         self.assertEqual(curs.rowcount, 1)
 
         self.assertRaises(
-            psycopg2.DataError, curs.copy_from, StringIO("aaa\nbbb\nccc\n"), "tcopy"
+            psycopg2.DataError,
+            curs.copy_from,
+            StringIO("aaa\nbbb\nccc\n"),
+            "tcopy",
         )
         self.assertEqual(curs.rowcount, -1)
-
-    def test_copy_query(self):
-        curs = self.conn.cursor()
-
-        curs.copy_from(StringIO("aaa\nbbb\nccc\n"), "tcopy", columns=["data"])
-        self.assert_(b"copy " in curs.query.lower())
-        self.assert_(b" from stdin" in curs.query.lower())
-
-        curs.copy_expert("copy tcopy (data) from stdin", StringIO("ddd\neee\n"))
-        self.assert_(b"copy " in curs.query.lower())
-        self.assert_(b" from stdin" in curs.query.lower())
-
-        curs.copy_to(StringIO(), "tcopy")
-        self.assert_(b"copy " in curs.query.lower())
-        self.assert_(b" to stdout" in curs.query.lower())
-
-        curs.execute("insert into tcopy (data) values ('fff')")
-        curs.copy_expert("copy tcopy to stdout", StringIO())
-        self.assert_(b"copy " in curs.query.lower())
-        self.assert_(b" to stdout" in curs.query.lower())
 
     @slow
     def test_copy_from_segfault(self):

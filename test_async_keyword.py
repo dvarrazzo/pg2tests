@@ -88,7 +88,9 @@ class AsyncTests(ConnectingTestCase):
             self.wait(cnn)
         except psycopg2.Error as e:
             self.assertNotEqual(
-                str(e), "asynchronous connection failed", "connection error reason lost"
+                str(e),
+                "asynchronous connection failed",
+                "connection error reason lost",
             )
         else:
             self.fail("no exception raised")
@@ -119,7 +121,9 @@ class CancelTests(ConnectingTestCase):
         self.assertTrue(async_conn.isexecuting())
         async_conn.cancel()
         self.assertRaises(
-            psycopg2.extensions.QueryCanceledError, extras.wait_select, async_conn
+            psycopg2.extensions.QueryCanceledError,
+            extras.wait_select,
+            async_conn,
         )
         cur.execute("select 1")
         extras.wait_select(async_conn)

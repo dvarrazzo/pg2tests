@@ -33,14 +33,7 @@ import psycopg2
 import psycopg2.errors
 from psycopg2 import extensions as ext
 
-from .testutils import (
-    ConnectingTestCase,
-    StringIO,
-    skip_before_postgres,
-    skip_if_crdb,
-    crdb_version,
-    slow,
-)
+from .testutils import ConnectingTestCase, StringIO, skip_before_postgres, slow
 
 
 class PollableStub(object):
@@ -69,10 +62,6 @@ class AsyncTests(ConnectingTestCase):
         self.wait(self.conn)
 
         curs = self.conn.cursor()
-        if crdb_version(self.sync_conn) is not None:
-            curs.execute("set experimental_enable_temp_tables = 'on'")
-            self.wait(curs)
-
         curs.execute(
             """
             CREATE TEMPORARY TABLE table1 (
@@ -121,6 +110,7 @@ class AsyncTests(ConnectingTestCase):
 
         self.wait(cur)
         self.assertFalse(self.conn.isexecuting())
+        self.assertEquals(cur.fetchall()[0][0], "")
 
     @slow
     def test_async_after_async(self):
@@ -346,7 +336,6 @@ class AsyncTests(ConnectingTestCase):
         conn.close()
 
     @slow
-    @skip_if_crdb("flush on write flakey")
     def test_flush_on_write(self):
         # a very large query requires a flush loop to be sent to the backend
         curs = self.conn.cursor()
@@ -373,7 +362,6 @@ class AsyncTests(ConnectingTestCase):
         self.assertEquals(cur.fetchone()[0], 1)
 
     @slow
-    @skip_if_crdb("notify")
     def test_notify(self):
         cur = self.conn.cursor()
         sync_cur = self.sync_conn.cursor()
@@ -416,14 +404,14 @@ class AsyncTests(ConnectingTestCase):
         # this should fail
         self.assertRaises(psycopg2.IntegrityError, self.wait, cur)
         cur.execute(
-            "insert into table1 values (%s); " "insert into table1 values (%s)", (2, 2)
+            "insert into table1 values (%s); " "insert into table1 values (%s)",
+            (2, 2),
         )
-        # this should fail as well (Postgres behaviour)
+        # this should fail as well
         self.assertRaises(psycopg2.IntegrityError, self.wait, cur)
         # but this should work
-        if crdb_version(self.sync_conn) is None:
-            cur.execute("insert into table1 values (%s)", (2,))
-            self.wait(cur)
+        cur.execute("insert into table1 values (%s)", (2,))
+        self.wait(cur)
         # and the cursor should be usable afterwards
         cur.execute("insert into table1 values (%s)", (3,))
         self.wait(cur)
@@ -451,7 +439,6 @@ class AsyncTests(ConnectingTestCase):
         self.wait(cur2)
         self.assertEquals(cur2.fetchone()[0], 1)
 
-    @skip_if_crdb("notice")
     def test_notices(self):
         del self.conn.notices[:]
         cur = self.conn.cursor()
@@ -476,14 +463,15 @@ class AsyncTests(ConnectingTestCase):
         self.wait(self.conn)
         self.assertEqual(cur.fetchone(), (42,))
 
-    @skip_if_crdb("copy")
     def test_async_connection_error_message(self):
         try:
             cnn = psycopg2.connect("dbname=thisdatabasedoesntexist", async_=True)
             self.wait(cnn)
         except psycopg2.Error as e:
             self.assertNotEqual(
-                str(e), "asynchronous connection failed", "connection error reason lost"
+                str(e),
+                "asynchronous connection failed",
+                "connection error reason lost",
             )
         else:
             self.fail("no exception raised")
@@ -495,7 +483,6 @@ class AsyncTests(ConnectingTestCase):
         self.assertRaises(psycopg2.ProgrammingError, self.wait, self.conn)
 
     @slow
-    @skip_if_crdb("notice")
     @skip_before_postgres(9, 0)
     def test_non_block_after_notification(self):
         from select import select
@@ -531,7 +518,6 @@ class AsyncTests(ConnectingTestCase):
     def test_poll_noop(self):
         self.conn.poll()
 
-    @skip_if_crdb("notify")
     @skip_before_postgres(9, 0)
     def test_poll_conn_for_notification(self):
         with self.conn.cursor() as cur:
@@ -553,11 +539,6 @@ class AsyncTests(ConnectingTestCase):
             time.sleep(0.1)
         else:
             self.fail("No notification received")
-
-    def test_close(self):
-        self.conn.close()
-        self.assertTrue(self.conn.closed)
-        self.assertTrue(self.conn.async_)
 
 
 def test_suite():

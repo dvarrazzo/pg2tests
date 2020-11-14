@@ -67,7 +67,9 @@ class TestExecuteBatch(FastExecuteTestMixin, testutils.ConnectingTestCase):
     def test_one(self):
         cur = self.conn.cursor()
         psycopg2.extras.execute_batch(
-            cur, "insert into testfast (id, val) values (%s, %s)", iter([(1, 10)])
+            cur,
+            "insert into testfast (id, val) values (%s, %s)",
+            iter([(1, 10)]),
         )
         cur.execute("select id, val from testfast order by id")
         self.assertEqual(cur.fetchall(), [(1, 10)])
@@ -81,7 +83,8 @@ class TestExecuteBatch(FastExecuteTestMixin, testutils.ConnectingTestCase):
         )
         cur.execute("select id, date, val from testfast order by id")
         self.assertEqual(
-            cur.fetchall(), [(i, date(2017, 1, i + 1), i * 10) for i in range(10)]
+            cur.fetchall(),
+            [(i, date(2017, 1, i + 1), i * 10) for i in range(10)],
         )
 
     def test_many(self):
@@ -138,7 +141,9 @@ class TestExecuteBatch(FastExecuteTestMixin, testutils.ConnectingTestCase):
 
         # unicode in data
         psycopg2.extras.execute_batch(
-            cur, "insert into testfast (id, data) values (%s, %s)", [(2, snowman)]
+            cur,
+            "insert into testfast (id, data) values (%s, %s)",
+            [(2, snowman)],
         )
         cur.execute("select id, data from testfast where id = 2")
         self.assertEqual(cur.fetchone(), (2, snowman))
@@ -180,7 +185,8 @@ class TestExecuteValues(FastExecuteTestMixin, testutils.ConnectingTestCase):
         )
         cur.execute("select id, date, val from testfast order by id")
         self.assertEqual(
-            cur.fetchall(), [(i, date(2017, 1, i + 1), i * 10) for i in range(10)]
+            cur.fetchall(),
+            [(i, date(2017, 1, i + 1), i * 10) for i in range(10)],
         )
 
     def test_dicts(self):
@@ -196,7 +202,8 @@ class TestExecuteValues(FastExecuteTestMixin, testutils.ConnectingTestCase):
         )
         cur.execute("select id, date, val from testfast order by id")
         self.assertEqual(
-            cur.fetchall(), [(i, date(2017, 1, i + 1), i * 10) for i in range(10)]
+            cur.fetchall(),
+            [(i, date(2017, 1, i + 1), i * 10) for i in range(10)],
         )
 
     def test_many(self):
@@ -282,7 +289,11 @@ class TestExecuteValues(FastExecuteTestMixin, testutils.ConnectingTestCase):
         cur = self.conn.cursor()
         self.assertRaises(ValueError, psycopg2.extras.execute_values, cur, "insert", [])
         self.assertRaises(
-            ValueError, psycopg2.extras.execute_values, cur, "insert %s and %s", []
+            ValueError,
+            psycopg2.extras.execute_values,
+            cur,
+            "insert %s and %s",
+            [],
         )
         self.assertRaises(
             ValueError, psycopg2.extras.execute_values, cur, "insert %f", []
@@ -294,7 +305,9 @@ class TestExecuteValues(FastExecuteTestMixin, testutils.ConnectingTestCase):
     def test_percent_escape(self):
         cur = self.conn.cursor()
         psycopg2.extras.execute_values(
-            cur, "insert into testfast (id, data) values %s -- a%%b", [(1, "hi")]
+            cur,
+            "insert into testfast (id, data) values %s -- a%%b",
+            [(1, "hi")],
         )
         self.assert_(b"a%%b" not in cur.query)
         self.assert_(b"a%b" in cur.query)

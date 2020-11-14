@@ -32,7 +32,6 @@ import platform
 from . import testutils
 import unittest
 from .testutils import PY2, long, text_type, ConnectingTestCase, restore_types
-from .testutils import skip_if_crdb
 
 import psycopg2
 from psycopg2.extensions import AsIs, adapt, register_adapter
@@ -55,7 +54,8 @@ class TypesBasicTests(ConnectingTestCase):
     def testUnicode(self):
         s = u"Quote'this\\! ''ok?''"
         self.failUnless(
-            self.execute("SELECT %s AS foo", (s,)) == s, "wrong unicode quoting: " + s
+            self.execute("SELECT %s AS foo", (s,)) == s,
+            "wrong unicode quoting: " + s,
         )
 
     def testNumber(self):
@@ -73,7 +73,8 @@ class TypesBasicTests(ConnectingTestCase):
     def testDecimal(self):
         s = self.execute("SELECT %s AS foo", (decimal.Decimal("19.10"),))
         self.failUnless(
-            s - decimal.Decimal("19.10") == 0, "wrong decimal quoting: " + str(s)
+            s - decimal.Decimal("19.10") == 0,
+            "wrong decimal quoting: " + str(s),
         )
         s = self.execute("SELECT %s AS foo", (decimal.Decimal("NaN"),))
         self.failUnless(str(s) == "NaN", "wrong decimal quoting: " + str(s))
@@ -155,14 +156,12 @@ class TypesBasicTests(ConnectingTestCase):
             buf2 = self.execute("SELECT %s::bytea AS foo", (buf,))
             self.assertEqual(s, buf2.tobytes())
 
-    @skip_if_crdb("nested array")
     def testArray(self):
         s = self.execute("SELECT %s AS foo", ([[1, 2], [3, 4]],))
         self.failUnlessEqual(s, [[1, 2], [3, 4]])
         s = self.execute("SELECT %s AS foo", (["one", "two", "three"],))
         self.failUnlessEqual(s, ["one", "two", "three"])
 
-    @skip_if_crdb("nested array")
     def testEmptyArrayRegression(self):
         # ticket #42
         curs = self.conn.cursor()
@@ -171,7 +170,8 @@ class TypesBasicTests(ConnectingTestCase):
         )
 
         curs.execute(
-            "insert into array_test values (%s, %s)", (1, [datetime.date(2011, 2, 14)])
+            "insert into array_test values (%s, %s)",
+            (1, [datetime.date(2011, 2, 14)]),
         )
         curs.execute("select col from array_test where id = 1")
         self.assertEqual(curs.fetchone()[0], [datetime.datetime(2011, 2, 14, 0, 0)])
@@ -180,7 +180,6 @@ class TypesBasicTests(ConnectingTestCase):
         curs.execute("select col from array_test where id = 2")
         self.assertEqual(curs.fetchone()[0], [])
 
-    @skip_if_crdb("nested array")
     @testutils.skip_before_postgres(8, 4)
     def testNestedEmptyArray(self):
         # issue #788
@@ -248,7 +247,6 @@ class TypesBasicTests(ConnectingTestCase):
         self.assert_(isinstance(x[0], bytes))
         self.assertEqual(x, [b"a", b"b", b"c"])
 
-    @skip_if_crdb("nested array")
     @testutils.skip_before_postgres(8, 2)
     def testArrayOfNulls(self):
         curs = self.conn.cursor()
@@ -287,7 +285,6 @@ class TypesBasicTests(ConnectingTestCase):
         curs.execute("insert into na (boolaa) values (%s)", ([[True, None]],))
         curs.execute("insert into na (boolaa) values (%s)", ([[None, None]],))
 
-    @skip_if_crdb("nested array")
     @testutils.skip_before_postgres(8, 2)
     def testNestedArrays(self):
         curs = self.conn.cursor()
@@ -418,7 +415,6 @@ class TypesBasicTests(ConnectingTestCase):
         a = self.execute("select '{1, 2, NULL}'::int4[]")
         self.assertEqual(a, [2, 4, "nada"])
 
-    @skip_if_crdb("cidr")
     @testutils.skip_before_postgres(8, 2)
     def testNetworkArray(self):
         # we don't know these types, but we know their arrays
