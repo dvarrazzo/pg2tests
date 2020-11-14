@@ -48,10 +48,12 @@ class AsyncTests(ConnectingTestCase):
         self.wait(self.conn)
 
         curs = self.conn.cursor()
-        curs.execute('''
+        curs.execute(
+            """
             CREATE TEMPORARY TABLE table1 (
               id int PRIMARY KEY
-            )''')
+            )"""
+        )
         self.wait(curs)
 
     def test_connection_setup(self):
@@ -82,11 +84,12 @@ class AsyncTests(ConnectingTestCase):
 
     def test_async_connection_error_message(self):
         try:
-            cnn = psycopg2.connect('dbname=thisdatabasedoesntexist', async=True)
+            cnn = psycopg2.connect("dbname=thisdatabasedoesntexist", async=True)
             self.wait(cnn)
         except psycopg2.Error as e:
-            self.assertNotEqual(str(e), "asynchronous connection failed",
-                "connection error reason lost")
+            self.assertNotEqual(
+                str(e), "asynchronous connection failed", "connection error reason lost"
+            )
         else:
             self.fail("no exception raised")
 
@@ -96,10 +99,12 @@ class CancelTests(ConnectingTestCase):
         ConnectingTestCase.setUp(self)
 
         cur = self.conn.cursor()
-        cur.execute('''
+        cur.execute(
+            """
             CREATE TEMPORARY TABLE table1 (
               id int PRIMARY KEY
-            )''')
+            )"""
+        )
         self.conn.commit()
 
     @slow
@@ -113,11 +118,12 @@ class CancelTests(ConnectingTestCase):
         time.sleep(1)
         self.assertTrue(async_conn.isexecuting())
         async_conn.cancel()
-        self.assertRaises(psycopg2.extensions.QueryCanceledError,
-                          extras.wait_select, async_conn)
+        self.assertRaises(
+            psycopg2.extensions.QueryCanceledError, extras.wait_select, async_conn
+        )
         cur.execute("select 1")
         extras.wait_select(async_conn)
-        self.assertEqual(cur.fetchall(), [(1, )])
+        self.assertEqual(cur.fetchall(), [(1,)])
 
     def test_async_connection_cancel(self):
         async_conn = psycopg2.connect(dsn, async=True)
@@ -140,49 +146,52 @@ class ConnectTestCase(unittest.TestCase):
 
     def test_there_has_to_be_something(self):
         self.assertRaises(TypeError, psycopg2.connect)
-        self.assertRaises(TypeError, psycopg2.connect,
-            connection_factory=lambda dsn, async=False: None)
-        self.assertRaises(TypeError, psycopg2.connect,
-            async=True)
+        self.assertRaises(
+            TypeError,
+            psycopg2.connect,
+            connection_factory=lambda dsn, async=False: None,
+        )
+        self.assertRaises(TypeError, psycopg2.connect, async=True)
 
     def test_factory(self):
         def f(dsn, async=False):
             pass
 
-        psycopg2.connect(database='foo', host='baz', connection_factory=f)
-        self.assertDsnEqual(self.args[0], 'dbname=foo host=baz')
+        psycopg2.connect(database="foo", host="baz", connection_factory=f)
+        self.assertDsnEqual(self.args[0], "dbname=foo host=baz")
         self.assertEqual(self.args[1], f)
         self.assertEqual(self.args[2], False)
 
         psycopg2.connect("dbname=foo host=baz", connection_factory=f)
-        self.assertDsnEqual(self.args[0], 'dbname=foo host=baz')
+        self.assertDsnEqual(self.args[0], "dbname=foo host=baz")
         self.assertEqual(self.args[1], f)
         self.assertEqual(self.args[2], False)
 
     def test_async(self):
-        psycopg2.connect(database='foo', host='baz', async=1)
-        self.assertDsnEqual(self.args[0], 'dbname=foo host=baz')
+        psycopg2.connect(database="foo", host="baz", async=1)
+        self.assertDsnEqual(self.args[0], "dbname=foo host=baz")
         self.assertEqual(self.args[1], None)
         self.assert_(self.args[2])
 
         psycopg2.connect("dbname=foo host=baz", async=True)
-        self.assertDsnEqual(self.args[0], 'dbname=foo host=baz')
+        self.assertDsnEqual(self.args[0], "dbname=foo host=baz")
         self.assertEqual(self.args[1], None)
         self.assert_(self.args[2])
 
 
 class AsyncReplicationTest(ReplicationTestCase):
-    @skip_before_postgres(9, 4)     # slots require 9.4
+    @skip_before_postgres(9, 4)  # slots require 9.4
     @skip_repl_if_green
     def test_async_replication(self):
         conn = self.repl_connect(
-            connection_factory=LogicalReplicationConnection, async=1)
+            connection_factory=LogicalReplicationConnection, async=1
+        )
         if conn is None:
             return
 
         cur = conn.cursor()
 
-        self.create_replication_slot(cur, output_plugin='test_decoding')
+        self.create_replication_slot(cur, output_plugin="test_decoding")
         self.wait(cur)
 
         cur.start_replication(self.slot)
@@ -214,6 +223,7 @@ class AsyncReplicationTest(ReplicationTestCase):
                     consume(msg)
                 else:
                     select([cur], [], [])
+
         self.assertRaises(StopReplication, process_stream)
 
 

@@ -26,7 +26,8 @@
 # Convert warnings into errors here. We can't do it with -W because on
 # Travis importing site raises a warning.
 import warnings
-warnings.simplefilter('error')  # noqa
+
+warnings.simplefilter("error")  # noqa
 
 import sys
 from .testconfig import dsn
@@ -65,6 +66,7 @@ if sys.version_info[:2] < (3, 6):
 def test_suite():
     # If connection to test db fails, bail out early.
     import psycopg2
+
     try:
         cnn = psycopg2.connect(dsn)
     except Exception as e:
@@ -105,5 +107,5 @@ def test_suite():
     return suite
 
 
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
+if __name__ == "__main__":
+    unittest.main(defaultTest="test_suite")

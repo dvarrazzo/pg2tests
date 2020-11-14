@@ -39,7 +39,7 @@ class ErrocodeTests(ConnectingTestCase):
 
         errs = []
 
-        def f(pg_code='40001'):
+        def f(pg_code="40001"):
             try:
                 errorcodes.lookup(pg_code)
             except Exception as e:
@@ -53,17 +53,15 @@ class ErrocodeTests(ConnectingTestCase):
 
             if errs:
                 self.fail(
-                    "raised %s errors in %s cycles (first is %s %s)" % (
-                        len(errs), MAX_CYCLES,
-                        errs[0].__class__.__name__, errs[0]))
+                    "raised %s errors in %s cycles (first is %s %s)"
+                    % (len(errs), MAX_CYCLES, errs[0].__class__.__name__, errs[0])
+                )
 
     def test_ambiguous_names(self):
-        self.assertEqual(
-            errorcodes.lookup('2F004'), "READING_SQL_DATA_NOT_PERMITTED")
-        self.assertEqual(
-            errorcodes.lookup('38004'), "READING_SQL_DATA_NOT_PERMITTED")
-        self.assertEqual(errorcodes.READING_SQL_DATA_NOT_PERMITTED, '38004')
-        self.assertEqual(errorcodes.READING_SQL_DATA_NOT_PERMITTED_, '2F004')
+        self.assertEqual(errorcodes.lookup("2F004"), "READING_SQL_DATA_NOT_PERMITTED")
+        self.assertEqual(errorcodes.lookup("38004"), "READING_SQL_DATA_NOT_PERMITTED")
+        self.assertEqual(errorcodes.READING_SQL_DATA_NOT_PERMITTED, "38004")
+        self.assertEqual(errorcodes.READING_SQL_DATA_NOT_PERMITTED_, "2F004")
 
 
 def test_suite():

@@ -47,6 +47,7 @@ from .testconfig import green, dsn, repl_dsn
 if PY2:
     # Python 2
     from StringIO import StringIO
+
     TextIOBase = object
     long = long
     reload = reload
@@ -54,9 +55,10 @@ if PY2:
 
 else:
     # Python 3
-    from io import StringIO         # noqa
-    from io import TextIOBase       # noqa
-    from importlib import reload    # noqa
+    from io import StringIO  # noqa
+    from io import TextIOBase  # noqa
+    from importlib import reload  # noqa
+
     long = int
     unichr = chr
 
@@ -64,8 +66,10 @@ else:
 # Silence warnings caused by the stubbornness of the Python unittest
 # maintainers
 # https://bugs.python.org/issue9424
-if (not hasattr(unittest.TestCase, 'assert_')
-        or unittest.TestCase.assert_ is not unittest.TestCase.assertTrue):
+if (
+    not hasattr(unittest.TestCase, "assert_")
+    or unittest.TestCase.assert_ is not unittest.TestCase.assertTrue
+):
     # mavaff...
     unittest.TestCase.assert_ = unittest.TestCase.assertTrue
     unittest.TestCase.failUnless = unittest.TestCase.assertTrue
@@ -90,6 +94,7 @@ class ConnectingTestCase(unittest.TestCase):
     Subclasses needing to customize setUp and tearDown should remember to call
     the base class implementations.
     """
+
     def setUp(self):
         self._conns = []
 
@@ -101,6 +106,7 @@ class ConnectingTestCase(unittest.TestCase):
 
     def assertQuotedEqual(self, first, second, msg=None):
         """Compare two quoted strings disregarding eventual E'' quotes"""
+
         def f(s):
             if isinstance(s, text_type):
                 return re.sub(r"\bE'", "'", s)
@@ -116,11 +122,11 @@ class ConnectingTestCase(unittest.TestCase):
             self._conns
         except AttributeError as e:
             raise AttributeError(
-                "%s (did you forget to call ConnectingTestCase.setUp()?)"
-                % e)
+                "%s (did you forget to call ConnectingTestCase.setUp()?)" % e
+            )
 
-        if 'dsn' in kwargs:
-            conninfo = kwargs.pop('dsn')
+        if "dsn" in kwargs:
+            conninfo = kwargs.pop("dsn")
         else:
             conninfo = dsn
         conn = psycopg2.connect(conninfo, **kwargs)
@@ -139,8 +145,8 @@ class ConnectingTestCase(unittest.TestCase):
         if repl_dsn is None:
             return self.skipTest("replication tests disabled by default")
 
-        if 'dsn' not in kwargs:
-            kwargs['dsn'] = repl_dsn
+        if "dsn" not in kwargs:
+            kwargs["dsn"] = repl_dsn
         try:
             conn = self.connect(**kwargs)
             if conn.async_ == 1:
@@ -157,7 +163,7 @@ class ConnectingTestCase(unittest.TestCase):
         return conn
 
     def _get_conn(self):
-        if not hasattr(self, '_the_conn'):
+        if not hasattr(self, "_the_conn"):
             self._the_conn = self.connect()
 
         return self._the_conn
@@ -170,7 +176,7 @@ class ConnectingTestCase(unittest.TestCase):
     # for use with async connections only
     def wait(self, cur_or_conn):
         pollable = cur_or_conn
-        if not hasattr(pollable, 'poll'):
+        if not hasattr(pollable, "poll"):
             pollable = cur_or_conn.connection
         while True:
             state = pollable.poll()
@@ -191,8 +197,8 @@ class ConnectingTestCase(unittest.TestCase):
         if ConnectingTestCase._libpq is not None:
             return ConnectingTestCase._libpq
 
-        libname = find_library('pq')
-        if libname is None and platform.system() == 'Windows':
+        libname = find_library("pq")
+        if libname is None and platform.system() == "Windows":
             raise self.skipTest("can't import libpq on windows")
 
         rv = ConnectingTestCase._libpq = ctypes.pydll.LoadLibrary(libname)
@@ -208,6 +214,7 @@ def decorate_all_tests(obj, *decorators):
     class, in which case it will decorate all the tests.
     """
     if isinstance(obj, types.FunctionType):
+
         def decorator(func_or_cls):
             if isinstance(func_or_cls, types.FunctionType):
                 return obj(func_or_cls)
@@ -218,7 +225,7 @@ def decorate_all_tests(obj, *decorators):
         return decorator
 
     for n in dir(obj):
-        if n.startswith('test'):
+        if n.startswith("test"):
             for d in decorators:
                 setattr(obj, n, d(getattr(obj, n)))
 
@@ -226,6 +233,7 @@ def decorate_all_tests(obj, *decorators):
 @decorate_all_tests
 def skip_if_no_uuid(f):
     """Decorator to skip a test if uuid is not supported by PG."""
+
     @wraps(f)
     def skip_if_no_uuid_(self):
         try:
@@ -246,6 +254,7 @@ def skip_if_no_uuid(f):
 @decorate_all_tests
 def skip_if_tpc_disabled(f):
     """Skip a test if the server has tpc support disabled."""
+
     @wraps(f)
     def skip_if_tpc_disabled_(self):
         cnn = self.connect()
@@ -256,7 +265,8 @@ def skip_if_tpc_disabled(f):
             cur.execute("SHOW max_prepared_transactions;")
         except psycopg2.ProgrammingError:
             return self.skipTest(
-                "server too old: two phase transactions not supported.")
+                "server too old: two phase transactions not supported."
+            )
         else:
             mtp = int(cur.fetchone()[0])
         cnn.close()
@@ -264,7 +274,8 @@ def skip_if_tpc_disabled(f):
         if not mtp:
             return self.skipTest(
                 "server not configured for two phase transactions. "
-                "set max_prepared_transactions to > 0 to run the test")
+                "set max_prepared_transactions to > 0 to run the test"
+            )
         return f(self)
 
     return skip_if_tpc_disabled_
@@ -284,12 +295,14 @@ def skip_before_postgres(*ver):
         def skip_before_postgres__(self):
             if self.conn.info.server_version < int("%d%02d%02d" % ver):
                 return self.skipTest(
-                    reason or "skipped because PostgreSQL %s"
-                    % self.conn.info.server_version)
+                    reason
+                    or "skipped because PostgreSQL %s" % self.conn.info.server_version
+                )
             else:
                 return f(self)
 
         return skip_before_postgres__
+
     return skip_before_postgres_
 
 
@@ -302,12 +315,14 @@ def skip_after_postgres(*ver):
         @wraps(f)
         def skip_after_postgres__(self):
             if self.conn.info.server_version >= int("%d%02d%02d" % ver):
-                return self.skipTest("skipped because PostgreSQL %s"
-                    % self.conn.info.server_version)
+                return self.skipTest(
+                    "skipped because PostgreSQL %s" % self.conn.info.server_version
+                )
             else:
                 return f(self)
 
         return skip_after_postgres__
+
     return skip_after_postgres_
 
 
@@ -329,6 +344,7 @@ def skip_before_libpq(*ver):
             "skipped because libpq %d" % v,
         )
         return decorator(cls)
+
     return skip_before_libpq_
 
 
@@ -343,36 +359,42 @@ def skip_after_libpq(*ver):
             "skipped because libpq %s" % v,
         )
         return decorator(cls)
+
     return skip_after_libpq_
 
 
 def skip_before_python(*ver):
     """Skip a test on Python before a certain version."""
+
     def skip_before_python_(cls):
         decorator = unittest.skipIf(
-            sys.version_info[:len(ver)] < ver,
+            sys.version_info[: len(ver)] < ver,
             "skipped because Python %s"
-            % ".".join(map(str, sys.version_info[:len(ver)])),
+            % ".".join(map(str, sys.version_info[: len(ver)])),
         )
         return decorator(cls)
+
     return skip_before_python_
 
 
 def skip_from_python(*ver):
     """Skip a test on Python after (including) a certain version."""
+
     def skip_from_python_(cls):
         decorator = unittest.skipIf(
-            sys.version_info[:len(ver)] >= ver,
+            sys.version_info[: len(ver)] >= ver,
             "skipped because Python %s"
-            % ".".join(map(str, sys.version_info[:len(ver)])),
+            % ".".join(map(str, sys.version_info[: len(ver)])),
         )
         return decorator(cls)
+
     return skip_from_python_
 
 
 @decorate_all_tests
 def skip_if_no_superuser(f):
     """Skip a test if the database user running the test is not a superuser"""
+
     @wraps(f)
     def skip_if_no_superuser_(self):
         try:
@@ -387,6 +409,7 @@ def skip_if_green(reason):
     def skip_if_green_(cls):
         decorator = unittest.skipIf(green, reason)
         return decorator(cls)
+
     return skip_if_green_
 
 
@@ -395,8 +418,8 @@ skip_copy_if_green = skip_if_green("copy in async mode currently not supported")
 
 def skip_if_no_getrefcount(cls):
     decorator = unittest.skipUnless(
-        hasattr(sys, 'getrefcount'),
-        'no sys.getrefcount()',
+        hasattr(sys, "getrefcount"),
+        "no sys.getrefcount()",
     )
     return decorator(cls)
 
@@ -404,7 +427,7 @@ def skip_if_no_getrefcount(cls):
 def skip_if_windows(cls):
     """Skip a test if run on windows"""
     decorator = unittest.skipIf(
-        platform.system() == 'Windows',
+        platform.system() == "Windows",
         "Not supported on Windows",
     )
     return decorator(cls)
@@ -430,8 +453,7 @@ def crdb_version(conn, __crdb_version=[]):
     else:
         m = re.search(r"\bv(\d+)\.(\d+)\.(\d+)", sver)
         if not m:
-            raise ValueError(
-                "can't parse CockroachDB version from %s" % sver)
+            raise ValueError("can't parse CockroachDB version from %s" % sver)
 
         ver = int(m.group(1)) * 10000 + int(m.group(2)) * 100 + int(m.group(3))
         __crdb_version.append(ver)
@@ -461,11 +483,13 @@ def skip_if_crdb(reason, conn=None, version=None):
         ver = crdb_version(conn)
         if ver is not None and _crdb_match_version(ver, version):
             if reason in crdb_reasons:
-                reason = (
-                    "%s (https://github.com/cockroachdb/cockroach/issues/%s)"
-                    % (reason, crdb_reasons[reason]))
+                reason = "%s (https://github.com/cockroachdb/cockroach/issues/%s)" % (
+                    reason,
+                    crdb_reasons[reason],
+                )
             raise unittest.SkipTest(
-                "not supported on CockroachDB %s: %s" % (ver, reason))
+                "not supported on CockroachDB %s: %s" % (ver, reason)
+            )
 
     @decorate_all_tests
     def skip_if_crdb_(f):
@@ -506,13 +530,14 @@ def _crdb_match_version(version, pattern):
     if pattern is None:
         return True
 
-    m = re.match(r'^(>|>=|<|<=|==|!=)\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$', pattern)
+    m = re.match(r"^(>|>=|<|<=|==|!=)\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$", pattern)
     if m is None:
         raise ValueError(
             "bad crdb version pattern %r: should be 'OP MAJOR[.MINOR[.BUGFIX]]'"
-            % pattern)
+            % pattern
+        )
 
-    ops = {'>': 'gt', '>=': 'ge', '<': 'lt', '<=': 'le', '==': 'eq', '!=': 'ne'}
+    ops = {">": "gt", ">=": "ge", "<": "lt", "<=": "le", "==": "eq", "!=": "ne"}
     op = getattr(operator, ops[m.group(1)])
     ref = int(m.group(2)) * 10000 + int(m.group(3) or 0) * 100 + int(m.group(4) or 0)
     return op(version, ref)
@@ -535,16 +560,19 @@ def slow(f):
 
     make check 2>&1 | ts -i "%.s" | sort -n
     """
+
     @wraps(f)
     def slow_(self):
-        if os.environ.get('PSYCOPG2_TEST_FAST', '0') != '0':
+        if os.environ.get("PSYCOPG2_TEST_FAST", "0") != "0":
             return self.skipTest("slow test")
         return f(self)
+
     return slow_
 
 
 def restore_types(f):
     """Decorator to restore the adaptation system after running a test"""
+
     @wraps(f)
     def restore_types_(self):
         types = psycopg2.extensions.string_types.copy()

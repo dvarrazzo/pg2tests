@@ -29,7 +29,10 @@ from select import select
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import (
-    PhysicalReplicationConnection, LogicalReplicationConnection, StopReplication)
+    PhysicalReplicationConnection,
+    LogicalReplicationConnection,
+    StopReplication,
+)
 
 from . import testconfig
 import unittest
@@ -79,8 +82,7 @@ class ReplicationTestCase(ConnectingTestCase):
             cur.execute("DROP TABLE dummy1")
         except psycopg2.ProgrammingError:
             conn.rollback()
-        cur.execute(
-            "CREATE TABLE dummy1 AS SELECT * FROM generate_series(1, 5) AS id")
+        cur.execute("CREATE TABLE dummy1 AS SELECT * FROM generate_series(1, 5) AS id")
         conn.commit()
 
 
@@ -100,8 +102,10 @@ class ReplicationTest(ReplicationTestCase):
             return self.skipTest("replication tests disabled by default")
 
         conn = self.repl_connect(
-            dsn=testconfig.repl_dsn, options='-cdatestyle=german',
-            connection_factory=PhysicalReplicationConnection)
+            dsn=testconfig.repl_dsn,
+            options="-cdatestyle=german",
+            connection_factory=PhysicalReplicationConnection,
+        )
         if conn is None:
             return
         cur = conn.cursor()
@@ -117,7 +121,7 @@ class ReplicationTest(ReplicationTestCase):
         cur.execute("IDENTIFY_SYSTEM")
         cur.fetchall()
 
-    @skip_before_postgres(9, 4)     # slots require 9.4
+    @skip_before_postgres(9, 4)  # slots require 9.4
     def test_create_replication_slot(self):
         conn = self.repl_connect(connection_factory=PhysicalReplicationConnection)
         if conn is None:
@@ -125,8 +129,7 @@ class ReplicationTest(ReplicationTestCase):
         cur = conn.cursor()
 
         self.create_replication_slot(cur)
-        self.assertRaises(
-            psycopg2.ProgrammingError, self.create_replication_slot, cur)
+        self.assertRaises(psycopg2.ProgrammingError, self.create_replication_slot, cur)
 
     @skip_before_postgres(9, 4)  # slots require 9.4
     @skip_repl_if_green
@@ -136,8 +139,7 @@ class ReplicationTest(ReplicationTestCase):
             return
         cur = conn.cursor()
 
-        self.assertRaises(psycopg2.ProgrammingError,
-            cur.start_replication, self.slot)
+        self.assertRaises(psycopg2.ProgrammingError, cur.start_replication, self.slot)
 
         self.create_replication_slot(cur)
         cur.start_replication(self.slot)
@@ -150,10 +152,12 @@ class ReplicationTest(ReplicationTestCase):
             return
         cur = conn.cursor()
 
-        self.create_replication_slot(cur, output_plugin='test_decoding')
+        self.create_replication_slot(cur, output_plugin="test_decoding")
         cur.start_replication_expert(
             sql.SQL("START_REPLICATION SLOT {slot} LOGICAL 0/00000000").format(
-                slot=sql.Identifier(self.slot)))
+                slot=sql.Identifier(self.slot)
+            )
+        )
 
     @skip_before_postgres(9, 4)  # slots require 9.4
     @skip_repl_if_green
@@ -163,7 +167,7 @@ class ReplicationTest(ReplicationTestCase):
             return
         cur = conn.cursor()
 
-        self.create_replication_slot(cur, output_plugin='test_decoding')
+        self.create_replication_slot(cur, output_plugin="test_decoding")
         self.make_replication_events()
 
         def consume(msg):
@@ -172,7 +176,8 @@ class ReplicationTest(ReplicationTestCase):
         with self.assertRaises(psycopg2.DataError):
             # try with invalid options
             cur.start_replication(
-                slot_name=self.slot, options={'invalid_param': 'value'})
+                slot_name=self.slot, options={"invalid_param": "value"}
+            )
             cur.consume_stream(consume)
 
         # try with correct command
@@ -188,7 +193,7 @@ class ReplicationTest(ReplicationTestCase):
 
         cur = conn.cursor()
 
-        self.create_replication_slot(cur, output_plugin='test_decoding')
+        self.create_replication_slot(cur, output_plugin="test_decoding")
 
         self.make_replication_events()
 
@@ -197,12 +202,13 @@ class ReplicationTest(ReplicationTestCase):
         def consume(msg):
             raise StopReplication()
 
-        self.assertRaises(StopReplication,
-            cur.consume_stream, consume, keepalive_interval=2)
+        self.assertRaises(
+            StopReplication, cur.consume_stream, consume, keepalive_interval=2
+        )
 
         conn.close()
 
-    @skip_before_postgres(9, 4)     # slots require 9.4
+    @skip_before_postgres(9, 4)  # slots require 9.4
     @skip_repl_if_green
     def test_stop_replication(self):
         conn = self.repl_connect(connection_factory=LogicalReplicationConnection)
@@ -210,7 +216,7 @@ class ReplicationTest(ReplicationTestCase):
             return
         cur = conn.cursor()
 
-        self.create_replication_slot(cur, output_plugin='test_decoding')
+        self.create_replication_slot(cur, output_plugin="test_decoding")
 
         self.make_replication_events()
 
@@ -218,21 +224,23 @@ class ReplicationTest(ReplicationTestCase):
 
         def consume(msg):
             raise StopReplication()
+
         self.assertRaises(StopReplication, cur.consume_stream, consume)
 
 
 class AsyncReplicationTest(ReplicationTestCase):
-    @skip_before_postgres(9, 4)     # slots require 9.4
+    @skip_before_postgres(9, 4)  # slots require 9.4
     @skip_repl_if_green
     def test_async_replication(self):
         conn = self.repl_connect(
-            connection_factory=LogicalReplicationConnection, async_=1)
+            connection_factory=LogicalReplicationConnection, async_=1
+        )
         if conn is None:
             return
 
         cur = conn.cursor()
 
-        self.create_replication_slot(cur, output_plugin='test_decoding')
+        self.create_replication_slot(cur, output_plugin="test_decoding")
         self.wait(cur)
 
         cur.start_replication(self.slot)
@@ -265,6 +273,7 @@ class AsyncReplicationTest(ReplicationTestCase):
                     consume(msg)
                 else:
                     select([cur], [], [])
+
         self.assertRaises(StopReplication, process_stream)
 
 

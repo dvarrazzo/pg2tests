@@ -209,18 +209,18 @@ class WithCursorTestCase(WithTestCase):
         # with another error.
         try:
             with self.conn as conn:
-                with conn.cursor('named') as cur:
+                with conn.cursor("named") as cur:
                     cur.execute("select 1/0")
                     cur.fetchone()
         except psycopg2.DataError as e:
-            self.assertEqual(e.pgcode, '22012')
+            self.assertEqual(e.pgcode, "22012")
         else:
             self.fail("where is my exception?")
 
     @skip_if_crdb("named cursor")
     @skip_before_postgres(8, 2)
     def test_named_with_noop(self):
-        with self.conn.cursor('named'):
+        with self.conn.cursor("named"):
             pass
 
 

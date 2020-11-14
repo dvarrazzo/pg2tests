@@ -42,10 +42,20 @@ import psycopg2.extras
 from psycopg2 import extensions as ext
 
 from .testutils import (
-    PY2, unittest, skip_if_no_superuser, skip_before_postgres,
-    skip_after_postgres, skip_before_libpq, skip_after_libpq,
-    ConnectingTestCase, skip_if_tpc_disabled, skip_if_windows, slow,
-    skip_if_crdb, crdb_version)
+    PY2,
+    unittest,
+    skip_if_no_superuser,
+    skip_before_postgres,
+    skip_after_postgres,
+    skip_before_libpq,
+    skip_after_libpq,
+    ConnectingTestCase,
+    skip_if_tpc_disabled,
+    skip_if_windows,
+    slow,
+    skip_if_crdb,
+    crdb_version,
+)
 
 from .testconfig import dbhost, dsn, dbname
 
@@ -83,8 +93,11 @@ class ConnectionTests(ConnectingTestCase):
         # ticket #148
         conn = self.conn
         cur = conn.cursor()
-        self.assertRaises(psycopg2.OperationalError,
-            cur.execute, "select pg_terminate_backend(pg_backend_pid())")
+        self.assertRaises(
+            psycopg2.OperationalError,
+            cur.execute,
+            "select pg_terminate_backend(pg_backend_pid())",
+        )
 
         self.assertEqual(conn.closed, 2)
         conn.close()
@@ -95,7 +108,7 @@ class ConnectionTests(ConnectingTestCase):
         conn = self.conn
         # switch session characteristics
         conn.autocommit = True
-        conn.isolation_level = 'serializable'
+        conn.isolation_level = "serializable"
         conn.readonly = True
         if self.conn.info.server_version >= 90100:
             conn.deferrable = False
@@ -130,19 +143,23 @@ class ConnectionTests(ConnectingTestCase):
         cur = conn.cursor()
         if self.conn.info.server_version >= 90300:
             cur.execute("set client_min_messages=debug1")
-        cur.execute("""
+        cur.execute(
+            """
             create temp table table1 (id serial);
             create temp table table2 (id serial);
-            """)
-        cur.execute("""
+            """
+        )
+        cur.execute(
+            """
             create temp table table3 (id serial);
             create temp table table4 (id serial);
-            """)
+            """
+        )
         self.assertEqual(4, len(conn.notices))
-        self.assert_('table1' in conn.notices[0])
-        self.assert_('table2' in conn.notices[1])
-        self.assert_('table3' in conn.notices[2])
-        self.assert_('table4' in conn.notices[3])
+        self.assert_("table1" in conn.notices[0])
+        self.assert_("table2" in conn.notices[1])
+        self.assert_("table3" in conn.notices[2])
+        self.assert_("table4" in conn.notices[3])
 
     @slow
     @skip_if_crdb("notice")
@@ -152,12 +169,13 @@ class ConnectionTests(ConnectingTestCase):
         if self.conn.info.server_version >= 90300:
             cur.execute("set client_min_messages=debug1")
         for i in range(0, 100, 10):
-            sql = " ".join(["create temp table table%d (id serial);" % j
-                            for j in range(i, i + 10)])
+            sql = " ".join(
+                ["create temp table table%d (id serial);" % j for j in range(i, i + 10)]
+            )
             cur.execute(sql)
 
         self.assertEqual(50, len(conn.notices))
-        self.assert_('table99' in conn.notices[-1], conn.notices[-1])
+        self.assert_("table99" in conn.notices[-1], conn.notices[-1])
 
     @slow
     @skip_if_crdb("notice")
@@ -168,33 +186,40 @@ class ConnectionTests(ConnectingTestCase):
         if self.conn.info.server_version >= 90300:
             cur.execute("set client_min_messages=debug1")
 
-        cur.execute("""
+        cur.execute(
+            """
             create temp table table1 (id serial);
             create temp table table2 (id serial);
-            """)
-        cur.execute("""
+            """
+        )
+        cur.execute(
+            """
             create temp table table3 (id serial);
-            create temp table table4 (id serial);""")
+            create temp table table4 (id serial);"""
+        )
         self.assertEqual(len(conn.notices), 4)
-        self.assert_('table1' in conn.notices.popleft())
-        self.assert_('table2' in conn.notices.popleft())
-        self.assert_('table3' in conn.notices.popleft())
-        self.assert_('table4' in conn.notices.popleft())
+        self.assert_("table1" in conn.notices.popleft())
+        self.assert_("table2" in conn.notices.popleft())
+        self.assert_("table3" in conn.notices.popleft())
+        self.assert_("table4" in conn.notices.popleft())
         self.assertEqual(len(conn.notices), 0)
 
         # not limited, but no error
         for i in range(0, 100, 10):
-            sql = " ".join(["create temp table table2_%d (id serial);" % j
-                            for j in range(i, i + 10)])
+            sql = " ".join(
+                [
+                    "create temp table table2_%d (id serial);" % j
+                    for j in range(i, i + 10)
+                ]
+            )
             cur.execute(sql)
 
-        self.assertEqual(len([n for n in conn.notices if 'CREATE TABLE' in n]),
-            100)
+        self.assertEqual(len([n for n in conn.notices if "CREATE TABLE" in n]), 100)
 
     @skip_if_crdb("notice")
     def test_notices_noappend(self):
         conn = self.conn
-        self.conn.notices = None    # will make an error swallowes ok
+        self.conn.notices = None  # will make an error swallowes ok
         cur = conn.cursor()
         if self.conn.info.server_version >= 90300:
             cur.execute("set client_min_messages=debug1")
@@ -207,16 +232,14 @@ class ConnectionTests(ConnectingTestCase):
         self.assert_(self.conn.server_version)
 
     def test_protocol_version(self):
-        self.assert_(self.conn.protocol_version in (2, 3),
-            self.conn.protocol_version)
+        self.assert_(self.conn.protocol_version in (2, 3), self.conn.protocol_version)
 
     def test_tpc_unsupported(self):
         cnn = self.conn
         if cnn.info.server_version >= 80100:
             return self.skipTest("tpc is supported")
 
-        self.assertRaises(psycopg2.NotSupportedError,
-            cnn.xid, 42, "foo", "bar")
+        self.assertRaises(psycopg2.NotSupportedError, cnn.xid, 42, "foo", "bar")
 
     @slow
     @skip_before_postgres(8, 2)
@@ -235,8 +258,7 @@ class ConnectionTests(ConnectingTestCase):
         t2.start()
         t1.join()
         t2.join()
-        self.assert_(time.time() - t0 < 7,
-            "something broken in concurrency")
+        self.assert_(time.time() - t0 < 7, "something broken in concurrency")
 
     @skip_if_crdb("encoding")
     def test_encoding_name(self):
@@ -245,20 +267,20 @@ class ConnectionTests(ConnectingTestCase):
         cur = self.conn.cursor()
         ext.register_type(ext.UNICODE, cur)
         cur.execute("select 'foo'::text;")
-        self.assertEqual(cur.fetchone()[0], u'foo')
+        self.assertEqual(cur.fetchone()[0], u"foo")
 
     def test_connect_nonnormal_envvar(self):
         # We must perform encoding normalization at connection time
         self.conn.close()
-        oldenc = os.environ.get('PGCLIENTENCODING')
-        os.environ['PGCLIENTENCODING'] = 'utf-8'    # malformed spelling
+        oldenc = os.environ.get("PGCLIENTENCODING")
+        os.environ["PGCLIENTENCODING"] = "utf-8"  # malformed spelling
         try:
             self.conn = self.connect()
         finally:
             if oldenc is not None:
-                os.environ['PGCLIENTENCODING'] = oldenc
+                os.environ["PGCLIENTENCODING"] = oldenc
             else:
-                del os.environ['PGCLIENTENCODING']
+                del os.environ["PGCLIENTENCODING"]
 
     def test_connect_no_string(self):
         class MyString(str):
@@ -308,25 +330,25 @@ class ConnectionTests(ConnectingTestCase):
         conn = self.connect(cursor_factory=psycopg2.extras.DictCursor)
         cur = conn.cursor()
         cur.execute("select 1 as a")
-        self.assertEqual(cur.fetchone()['a'], 1)
+        self.assertEqual(cur.fetchone()["a"], 1)
 
     def test_cursor_factory(self):
         self.assertEqual(self.conn.cursor_factory, None)
         cur = self.conn.cursor()
         cur.execute("select 1 as a")
-        self.assertRaises(TypeError, (lambda r: r['a']), cur.fetchone())
+        self.assertRaises(TypeError, (lambda r: r["a"]), cur.fetchone())
 
         self.conn.cursor_factory = psycopg2.extras.DictCursor
         self.assertEqual(self.conn.cursor_factory, psycopg2.extras.DictCursor)
         cur = self.conn.cursor()
         cur.execute("select 1 as a")
-        self.assertEqual(cur.fetchone()['a'], 1)
+        self.assertEqual(cur.fetchone()["a"], 1)
 
         self.conn.cursor_factory = None
         self.assertEqual(self.conn.cursor_factory, None)
         cur = self.conn.cursor()
         cur.execute("select 1 as a")
-        self.assertRaises(TypeError, (lambda r: r['a']), cur.fetchone())
+        self.assertRaises(TypeError, (lambda r: r["a"]), cur.fetchone())
 
     def test_cursor_factory_none(self):
         # issue #210
@@ -349,7 +371,7 @@ class ConnectionTests(ConnectingTestCase):
 
         c = SubConnection("dbname=thereisnosuchdatabasemate password=foobar")
         self.assert_(c.closed, "connection failed so it must be closed")
-        self.assert_('foobar' not in c.dsn, "password was not obscured")
+        self.assert_("foobar" not in c.dsn, "password was not obscured")
 
     def test_get_native_connection(self):
         conn = self.connect()
@@ -369,9 +391,8 @@ class ConnectionTests(ConnectingTestCase):
             f.argtypes = [ctypes.c_void_p]
             f.restype = ctypes.c_int
             ver = f(conn.pgconn_ptr)
-            if ver == 0 and sys.platform == 'darwin':
-                return self.skipTest(
-                    "I don't know why this func returns 0 on OSX")
+            if ver == 0 and sys.platform == "darwin":
+                return self.skipTest("I don't know why this func returns 0 on OSX")
 
             self.assertEqual(ver, conn.server_version)
 
@@ -382,8 +403,9 @@ class ConnectionTests(ConnectingTestCase):
     def test_multiprocess_close(self):
         dir = tempfile.mkdtemp()
         try:
-            with open(os.path.join(dir, "mptest.py"), 'w') as f:
-                f.write("""\
+            with open(os.path.join(dir, "mptest.py"), "w") as f:
+                f.write(
+                    """\
 import time
 import psycopg2
 
@@ -396,9 +418,11 @@ def thread():
 
 def process():
     time.sleep(0.2)
-""" % {'dsn': dsn})
+"""
+                    % {"dsn": dsn}
+                )
 
-            script = ("""\
+            script = """\
 import sys
 sys.path.insert(0, %(dir)r)
 import time
@@ -411,11 +435,12 @@ t.start()
 time.sleep(0.2)
 multiprocessing.Process(target=mptest.process, name='myprocess').start()
 t.join()
-""" % {'dir': dir})
+""" % {
+                "dir": dir
+            }
 
-            out = sp.check_output(
-                [sys.executable, '-c', script], stderr=sp.STDOUT)
-            self.assertEqual(out, b'', out)
+            out = sp.check_output([sys.executable, "-c", script], stderr=sp.STDOUT)
+            self.assertEqual(out, b"", out)
         finally:
             shutil.rmtree(dir, ignore_errors=True)
 
@@ -423,17 +448,22 @@ t.join()
 class ParseDsnTestCase(ConnectingTestCase):
     def test_parse_dsn(self):
         self.assertEqual(
-            ext.parse_dsn('dbname=test user=tester password=secret'),
-            dict(user='tester', password='secret', dbname='test'),
-            "simple DSN parsed")
+            ext.parse_dsn("dbname=test user=tester password=secret"),
+            dict(user="tester", password="secret", dbname="test"),
+            "simple DSN parsed",
+        )
 
-        self.assertRaises(psycopg2.ProgrammingError, ext.parse_dsn,
-                          "dbname=test 2 user=tester password=secret")
+        self.assertRaises(
+            psycopg2.ProgrammingError,
+            ext.parse_dsn,
+            "dbname=test 2 user=tester password=secret",
+        )
 
         self.assertEqual(
             ext.parse_dsn("dbname='test 2' user=tester password=secret"),
-            dict(user='tester', password='secret', dbname='test 2'),
-            "DSN with quoting parsed")
+            dict(user="tester", password="secret", dbname="test 2"),
+            "DSN with quoting parsed",
+        )
 
         # Can't really use assertRaisesRegexp() here since we need to
         # make sure that secret is *not* exposed in the error message.
@@ -443,38 +473,43 @@ class ParseDsnTestCase(ConnectingTestCase):
             ext.parse_dsn("dbname='test 2 user=tester password=secret")
         except psycopg2.ProgrammingError as e:
             raised = True
-            self.assertTrue(str(e).find('secret') < 0,
-                            "DSN was not exposed in error message")
+            self.assertTrue(
+                str(e).find("secret") < 0, "DSN was not exposed in error message"
+            )
         self.assertTrue(raised, "ProgrammingError raised due to invalid DSN")
 
     @skip_before_libpq(9, 2)
     def test_parse_dsn_uri(self):
-        self.assertEqual(ext.parse_dsn('postgresql://tester:secret@/test'),
-                         dict(user='tester', password='secret', dbname='test'),
-                         "valid URI dsn parsed")
+        self.assertEqual(
+            ext.parse_dsn("postgresql://tester:secret@/test"),
+            dict(user="tester", password="secret", dbname="test"),
+            "valid URI dsn parsed",
+        )
 
         raised = False
         try:
             # extra '=' after port value
-            ext.parse_dsn(dsn='postgresql://tester:secret@/test?port=1111=x')
+            ext.parse_dsn(dsn="postgresql://tester:secret@/test?port=1111=x")
         except psycopg2.ProgrammingError as e:
             raised = True
-            self.assertTrue(str(e).find('secret') < 0,
-                            "URI was not exposed in error message")
+            self.assertTrue(
+                str(e).find("secret") < 0, "URI was not exposed in error message"
+            )
         self.assertTrue(raised, "ProgrammingError raised due to invalid URI")
 
     def test_unicode_value(self):
         snowman = u"\u2603"
-        d = ext.parse_dsn('dbname=' + snowman)
+        d = ext.parse_dsn("dbname=" + snowman)
         if PY2:
-            self.assertEqual(d['dbname'], snowman.encode('utf8'))
+            self.assertEqual(d["dbname"], snowman.encode("utf8"))
         else:
-            self.assertEqual(d['dbname'], snowman)
+            self.assertEqual(d["dbname"], snowman)
 
     def test_unicode_key(self):
         snowman = u"\u2603"
-        self.assertRaises(psycopg2.ProgrammingError, ext.parse_dsn,
-            snowman + '=' + snowman)
+        self.assertRaises(
+            psycopg2.ProgrammingError, ext.parse_dsn, snowman + "=" + snowman
+        )
 
     def test_bad_param(self):
         self.assertRaises(TypeError, ext.parse_dsn, None)
@@ -485,34 +520,33 @@ class ParseDsnTestCase(ConnectingTestCase):
             pass
 
         res = ext.parse_dsn(MyString("dbname=test"))
-        self.assertEqual(res, {'dbname': 'test'})
+        self.assertEqual(res, {"dbname": "test"})
 
 
 class MakeDsnTestCase(ConnectingTestCase):
     def test_empty_arguments(self):
-        self.assertEqual(ext.make_dsn(), '')
+        self.assertEqual(ext.make_dsn(), "")
 
     def test_empty_string(self):
-        dsn = ext.make_dsn('')
-        self.assertEqual(dsn, '')
+        dsn = ext.make_dsn("")
+        self.assertEqual(dsn, "")
 
     def test_params_validation(self):
-        self.assertRaises(psycopg2.ProgrammingError,
-            ext.make_dsn, 'dbnamo=a')
-        self.assertRaises(psycopg2.ProgrammingError,
-            ext.make_dsn, dbnamo='a')
-        self.assertRaises(psycopg2.ProgrammingError,
-            ext.make_dsn, 'dbname=a', nosuchparam='b')
+        self.assertRaises(psycopg2.ProgrammingError, ext.make_dsn, "dbnamo=a")
+        self.assertRaises(psycopg2.ProgrammingError, ext.make_dsn, dbnamo="a")
+        self.assertRaises(
+            psycopg2.ProgrammingError, ext.make_dsn, "dbname=a", nosuchparam="b"
+        )
 
     def test_empty_param(self):
-        dsn = ext.make_dsn(dbname='sony', password='')
+        dsn = ext.make_dsn(dbname="sony", password="")
         self.assertDsnEqual(dsn, "dbname=sony password=''")
 
     def test_escape(self):
-        dsn = ext.make_dsn(dbname='hello world')
+        dsn = ext.make_dsn(dbname="hello world")
         self.assertEqual(dsn, "dbname='hello world'")
 
-        dsn = ext.make_dsn(dbname=r'back\slash')
+        dsn = ext.make_dsn(dbname=r"back\slash")
         self.assertEqual(dsn, r"dbname=back\\slash")
 
         dsn = ext.make_dsn(dbname="quo'te")
@@ -525,17 +559,17 @@ class MakeDsnTestCase(ConnectingTestCase):
         self.assertEqual(dsn, r"dbname='\\every thing\''")
 
     def test_database_is_a_keyword(self):
-        self.assertEqual(ext.make_dsn(database='sigh'), "dbname=sigh")
+        self.assertEqual(ext.make_dsn(database="sigh"), "dbname=sigh")
 
     def test_params_merging(self):
-        dsn = ext.make_dsn('dbname=foo host=bar', host='baz')
-        self.assertDsnEqual(dsn, 'dbname=foo host=baz')
+        dsn = ext.make_dsn("dbname=foo host=bar", host="baz")
+        self.assertDsnEqual(dsn, "dbname=foo host=baz")
 
-        dsn = ext.make_dsn('dbname=foo', user='postgres')
-        self.assertDsnEqual(dsn, 'dbname=foo user=postgres')
+        dsn = ext.make_dsn("dbname=foo", user="postgres")
+        self.assertDsnEqual(dsn, "dbname=foo user=postgres")
 
     def test_no_dsn_munging(self):
-        dsnin = 'dbname=a host=b user=c password=d'
+        dsnin = "dbname=a host=b user=c password=d"
         dsn = ext.make_dsn(dsnin)
         self.assertEqual(dsn, dsnin)
 
@@ -545,29 +579,31 @@ class MakeDsnTestCase(ConnectingTestCase):
 
     @skip_before_libpq(9, 2)
     def test_url_is_cool(self):
-        url = 'postgresql://tester:secret@/test?application_name=wat'
+        url = "postgresql://tester:secret@/test?application_name=wat"
         dsn = ext.make_dsn(url)
         self.assertEqual(dsn, url)
 
-        dsn = ext.make_dsn(url, application_name='woot')
-        self.assertDsnEqual(dsn,
-            'dbname=test user=tester password=secret application_name=woot')
+        dsn = ext.make_dsn(url, application_name="woot")
+        self.assertDsnEqual(
+            dsn, "dbname=test user=tester password=secret application_name=woot"
+        )
 
-        self.assertRaises(psycopg2.ProgrammingError,
-            ext.make_dsn, 'postgresql://tester:secret@/test?nosuch=param')
-        self.assertRaises(psycopg2.ProgrammingError,
-            ext.make_dsn, url, nosuch="param")
+        self.assertRaises(
+            psycopg2.ProgrammingError,
+            ext.make_dsn,
+            "postgresql://tester:secret@/test?nosuch=param",
+        )
+        self.assertRaises(psycopg2.ProgrammingError, ext.make_dsn, url, nosuch="param")
 
     @skip_before_libpq(9, 3)
     def test_get_dsn_parameters(self):
         conn = self.connect()
         d = conn.get_dsn_parameters()
-        self.assertEqual(d['dbname'], dbname)  # the only param we can check reliably
-        self.assert_('password' not in d, d)
+        self.assertEqual(d["dbname"], dbname)  # the only param we can check reliably
+        self.assert_("password" not in d, d)
 
 
 class IsolationLevelsTestCase(ConnectingTestCase):
-
     def setUp(self):
         ConnectingTestCase.setUp(self)
 
@@ -591,9 +627,7 @@ class IsolationLevelsTestCase(ConnectingTestCase):
 
     def test_isolation_level(self):
         conn = self.connect()
-        self.assertEqual(
-            conn.isolation_level,
-            ext.ISOLATION_LEVEL_DEFAULT)
+        self.assertEqual(conn.isolation_level, ext.ISOLATION_LEVEL_DEFAULT)
 
     def test_encoding(self):
         conn = self.connect()
@@ -605,11 +639,10 @@ class IsolationLevelsTestCase(ConnectingTestCase):
         curs = conn.cursor()
 
         levels = [
-            ('read uncommitted',
-                ext.ISOLATION_LEVEL_READ_UNCOMMITTED),
-            ('read committed', ext.ISOLATION_LEVEL_READ_COMMITTED),
-            ('repeatable read', ext.ISOLATION_LEVEL_REPEATABLE_READ),
-            ('serializable', ext.ISOLATION_LEVEL_SERIALIZABLE),
+            ("read uncommitted", ext.ISOLATION_LEVEL_READ_UNCOMMITTED),
+            ("read committed", ext.ISOLATION_LEVEL_READ_COMMITTED),
+            ("repeatable read", ext.ISOLATION_LEVEL_REPEATABLE_READ),
+            ("serializable", ext.ISOLATION_LEVEL_SERIALIZABLE),
         ]
         for name, level in levels:
             conn.set_isolation_level(level)
@@ -617,13 +650,14 @@ class IsolationLevelsTestCase(ConnectingTestCase):
             # the only values available on prehistoric PG versions
             if conn.info.server_version < 80000:
                 if level in (
-                        ext.ISOLATION_LEVEL_READ_UNCOMMITTED,
-                        ext.ISOLATION_LEVEL_REPEATABLE_READ):
+                    ext.ISOLATION_LEVEL_READ_UNCOMMITTED,
+                    ext.ISOLATION_LEVEL_REPEATABLE_READ,
+                ):
                     name, level = levels[levels.index((name, level)) + 1]
 
             self.assertEqual(conn.isolation_level, level)
 
-            curs.execute('show transaction_isolation;')
+            curs.execute("show transaction_isolation;")
             got_name = curs.fetchone()[0]
 
             self.assertEqual(name, got_name)
@@ -640,12 +674,12 @@ class IsolationLevelsTestCase(ConnectingTestCase):
         self.assertEqual(conn.isolation_level, ext.ISOLATION_LEVEL_DEFAULT)
         self.assert_(conn.autocommit)
 
-        conn.isolation_level = 'serializable'
+        conn.isolation_level = "serializable"
         self.assertEqual(conn.isolation_level, ext.ISOLATION_LEVEL_SERIALIZABLE)
         self.assert_(conn.autocommit)
 
-        curs.execute('show transaction_isolation;')
-        self.assertEqual(curs.fetchone()[0], 'serializable')
+        curs.execute("show transaction_isolation;")
+        self.assertEqual(curs.fetchone()[0], "serializable")
 
     @skip_if_crdb("isolation level")
     def test_set_isolation_level_default(self):
@@ -657,8 +691,7 @@ class IsolationLevelsTestCase(ConnectingTestCase):
 
         conn.autocommit = False
         conn.set_isolation_level(ext.ISOLATION_LEVEL_SERIALIZABLE)
-        self.assertEqual(conn.isolation_level,
-            ext.ISOLATION_LEVEL_SERIALIZABLE)
+        self.assertEqual(conn.isolation_level, ext.ISOLATION_LEVEL_SERIALIZABLE)
         curs.execute("show transaction_isolation")
         self.assertEqual(curs.fetchone()[0], "serializable")
 
@@ -671,40 +704,41 @@ class IsolationLevelsTestCase(ConnectingTestCase):
         conn = self.connect()
         cur = conn.cursor()
 
-        self.assertEqual(ext.TRANSACTION_STATUS_IDLE,
-            conn.info.transaction_status)
+        self.assertEqual(ext.TRANSACTION_STATUS_IDLE, conn.info.transaction_status)
         cur.execute("insert into isolevel values (10);")
-        self.assertEqual(ext.TRANSACTION_STATUS_INTRANS,
-            conn.info.transaction_status)
+        self.assertEqual(ext.TRANSACTION_STATUS_INTRANS, conn.info.transaction_status)
 
-        conn.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE)
-        self.assertEqual(psycopg2.extensions.TRANSACTION_STATUS_IDLE,
-            conn.info.transaction_status)
+        conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE)
+        self.assertEqual(
+            psycopg2.extensions.TRANSACTION_STATUS_IDLE, conn.info.transaction_status
+        )
         cur.execute("select count(*) from isolevel;")
         self.assertEqual(0, cur.fetchone()[0])
 
         cur.execute("insert into isolevel values (10);")
-        self.assertEqual(psycopg2.extensions.TRANSACTION_STATUS_INTRANS,
-            conn.info.transaction_status)
-        conn.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-        self.assertEqual(psycopg2.extensions.TRANSACTION_STATUS_IDLE,
-            conn.info.transaction_status)
+        self.assertEqual(
+            psycopg2.extensions.TRANSACTION_STATUS_INTRANS, conn.info.transaction_status
+        )
+        conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+        self.assertEqual(
+            psycopg2.extensions.TRANSACTION_STATUS_IDLE, conn.info.transaction_status
+        )
         cur.execute("select count(*) from isolevel;")
         self.assertEqual(0, cur.fetchone()[0])
 
         cur.execute("insert into isolevel values (10);")
-        self.assertEqual(psycopg2.extensions.TRANSACTION_STATUS_IDLE,
-            conn.info.transaction_status)
-        conn.set_isolation_level(
-            psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
-        self.assertEqual(psycopg2.extensions.TRANSACTION_STATUS_IDLE,
-            conn.info.transaction_status)
+        self.assertEqual(
+            psycopg2.extensions.TRANSACTION_STATUS_IDLE, conn.info.transaction_status
+        )
+        conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
+        self.assertEqual(
+            psycopg2.extensions.TRANSACTION_STATUS_IDLE, conn.info.transaction_status
+        )
         cur.execute("select count(*) from isolevel;")
         self.assertEqual(1, cur.fetchone()[0])
-        self.assertEqual(conn.isolation_level,
-            psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
+        self.assertEqual(
+            conn.isolation_level, psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED
+        )
 
     def test_isolation_level_autocommit(self):
         cnn1 = self.connect()
@@ -782,10 +816,8 @@ class IsolationLevelsTestCase(ConnectingTestCase):
     def test_isolation_level_closed(self):
         cnn = self.connect()
         cnn.close()
-        self.assertRaises(psycopg2.InterfaceError,
-            cnn.set_isolation_level, 0)
-        self.assertRaises(psycopg2.InterfaceError,
-            cnn.set_isolation_level, 1)
+        self.assertRaises(psycopg2.InterfaceError, cnn.set_isolation_level, 0)
+        self.assertRaises(psycopg2.InterfaceError, cnn.set_isolation_level, 1)
 
     @skip_if_crdb("isolation level")
     def test_setattr_isolation_level_int(self):
@@ -794,38 +826,41 @@ class IsolationLevelsTestCase(ConnectingTestCase):
         self.assertEqual(self.conn.isolation_level, ext.ISOLATION_LEVEL_SERIALIZABLE)
 
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'serializable')
+        self.assertEqual(cur.fetchone()[0], "serializable")
         self.conn.rollback()
 
         self.conn.isolation_level = ext.ISOLATION_LEVEL_REPEATABLE_READ
         cur.execute("SHOW transaction_isolation;")
         if self.conn.info.server_version > 80000:
-            self.assertEqual(self.conn.isolation_level,
-                ext.ISOLATION_LEVEL_REPEATABLE_READ)
-            self.assertEqual(cur.fetchone()[0], 'repeatable read')
+            self.assertEqual(
+                self.conn.isolation_level, ext.ISOLATION_LEVEL_REPEATABLE_READ
+            )
+            self.assertEqual(cur.fetchone()[0], "repeatable read")
         else:
-            self.assertEqual(self.conn.isolation_level,
-                ext.ISOLATION_LEVEL_SERIALIZABLE)
-            self.assertEqual(cur.fetchone()[0], 'serializable')
+            self.assertEqual(
+                self.conn.isolation_level, ext.ISOLATION_LEVEL_SERIALIZABLE
+            )
+            self.assertEqual(cur.fetchone()[0], "serializable")
         self.conn.rollback()
 
         self.conn.isolation_level = ext.ISOLATION_LEVEL_READ_COMMITTED
-        self.assertEqual(self.conn.isolation_level,
-            ext.ISOLATION_LEVEL_READ_COMMITTED)
+        self.assertEqual(self.conn.isolation_level, ext.ISOLATION_LEVEL_READ_COMMITTED)
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'read committed')
+        self.assertEqual(cur.fetchone()[0], "read committed")
         self.conn.rollback()
 
         self.conn.isolation_level = ext.ISOLATION_LEVEL_READ_UNCOMMITTED
         cur.execute("SHOW transaction_isolation;")
         if self.conn.info.server_version > 80000:
-            self.assertEqual(self.conn.isolation_level,
-                ext.ISOLATION_LEVEL_READ_UNCOMMITTED)
-            self.assertEqual(cur.fetchone()[0], 'read uncommitted')
+            self.assertEqual(
+                self.conn.isolation_level, ext.ISOLATION_LEVEL_READ_UNCOMMITTED
+            )
+            self.assertEqual(cur.fetchone()[0], "read uncommitted")
         else:
-            self.assertEqual(self.conn.isolation_level,
-                ext.ISOLATION_LEVEL_READ_COMMITTED)
-            self.assertEqual(cur.fetchone()[0], 'read committed')
+            self.assertEqual(
+                self.conn.isolation_level, ext.ISOLATION_LEVEL_READ_COMMITTED
+            )
+            self.assertEqual(cur.fetchone()[0], "read committed")
         self.conn.rollback()
 
         self.assertEqual(ext.ISOLATION_LEVEL_DEFAULT, None)
@@ -843,38 +878,41 @@ class IsolationLevelsTestCase(ConnectingTestCase):
         self.assertEqual(self.conn.isolation_level, ext.ISOLATION_LEVEL_SERIALIZABLE)
 
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'serializable')
+        self.assertEqual(cur.fetchone()[0], "serializable")
         self.conn.rollback()
 
         self.conn.isolation_level = "repeatable read"
         cur.execute("SHOW transaction_isolation;")
         if self.conn.info.server_version > 80000:
-            self.assertEqual(self.conn.isolation_level,
-                ext.ISOLATION_LEVEL_REPEATABLE_READ)
-            self.assertEqual(cur.fetchone()[0], 'repeatable read')
+            self.assertEqual(
+                self.conn.isolation_level, ext.ISOLATION_LEVEL_REPEATABLE_READ
+            )
+            self.assertEqual(cur.fetchone()[0], "repeatable read")
         else:
-            self.assertEqual(self.conn.isolation_level,
-                ext.ISOLATION_LEVEL_SERIALIZABLE)
-            self.assertEqual(cur.fetchone()[0], 'serializable')
+            self.assertEqual(
+                self.conn.isolation_level, ext.ISOLATION_LEVEL_SERIALIZABLE
+            )
+            self.assertEqual(cur.fetchone()[0], "serializable")
         self.conn.rollback()
 
         self.conn.isolation_level = "read committed"
-        self.assertEqual(self.conn.isolation_level,
-            ext.ISOLATION_LEVEL_READ_COMMITTED)
+        self.assertEqual(self.conn.isolation_level, ext.ISOLATION_LEVEL_READ_COMMITTED)
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'read committed')
+        self.assertEqual(cur.fetchone()[0], "read committed")
         self.conn.rollback()
 
         self.conn.isolation_level = "read uncommitted"
         cur.execute("SHOW transaction_isolation;")
         if self.conn.info.server_version > 80000:
-            self.assertEqual(self.conn.isolation_level,
-                ext.ISOLATION_LEVEL_READ_UNCOMMITTED)
-            self.assertEqual(cur.fetchone()[0], 'read uncommitted')
+            self.assertEqual(
+                self.conn.isolation_level, ext.ISOLATION_LEVEL_READ_UNCOMMITTED
+            )
+            self.assertEqual(cur.fetchone()[0], "read uncommitted")
         else:
-            self.assertEqual(self.conn.isolation_level,
-                ext.ISOLATION_LEVEL_READ_COMMITTED)
-            self.assertEqual(cur.fetchone()[0], 'read committed')
+            self.assertEqual(
+                self.conn.isolation_level, ext.ISOLATION_LEVEL_READ_COMMITTED
+            )
+            self.assertEqual(cur.fetchone()[0], "read committed")
         self.conn.rollback()
 
         self.conn.isolation_level = "default"
@@ -885,10 +923,10 @@ class IsolationLevelsTestCase(ConnectingTestCase):
         self.assertEqual(cur.fetchone()[0], isol)
 
     def test_setattr_isolation_level_invalid(self):
-        self.assertRaises(ValueError, setattr, self.conn, 'isolation_level', 0)
-        self.assertRaises(ValueError, setattr, self.conn, 'isolation_level', -1)
-        self.assertRaises(ValueError, setattr, self.conn, 'isolation_level', 5)
-        self.assertRaises(ValueError, setattr, self.conn, 'isolation_level', 'bah')
+        self.assertRaises(ValueError, setattr, self.conn, "isolation_level", 0)
+        self.assertRaises(ValueError, setattr, self.conn, "isolation_level", -1)
+        self.assertRaises(ValueError, setattr, self.conn, "isolation_level", 5)
+        self.assertRaises(ValueError, setattr, self.conn, "isolation_level", "bah")
 
     def test_attribs_segfault(self):
         # bug #790
@@ -918,8 +956,8 @@ class ConnectionTwoPhaseTests(ConnectingTestCase):
         cur = cnn.cursor()
         try:
             cur.execute(
-                "select gid from pg_prepared_xacts where database = %s",
-                (dbname,))
+                "select gid from pg_prepared_xacts where database = %s", (dbname,)
+            )
         except psycopg2.ProgrammingError:
             cnn.rollback()
             cnn.close()
@@ -954,10 +992,12 @@ class ConnectionTwoPhaseTests(ConnectingTestCase):
         """Return the number of prepared xacts currently in the test db."""
         cnn = self.connect()
         cur = cnn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             select count(*) from pg_prepared_xacts
             where database = %s;""",
-            (dbname,))
+            (dbname,),
+        )
         rv = cur.fetchone()[0]
         cnn.close()
         return rv
@@ -1126,18 +1166,20 @@ class ConnectionTwoPhaseTests(ConnectingTestCase):
         cur.execute("begin; prepare transaction '2-bar';")
 
         # read the values to return
-        cur.execute("""
+        cur.execute(
+            """
             select gid, prepared, owner, database
             from pg_prepared_xacts
             where database = %s;""",
-            (dbname,))
+            (dbname,),
+        )
         okvals = cur.fetchall()
         okvals.sort()
 
         cnn = self.connect()
         xids = cnn.tpc_recover()
         xids = [xid for xid in xids if xid.database == dbname]
-        xids.sort(key=attrgetter('gtrid'))
+        xids.sort(key=attrgetter("gtrid"))
 
         # check the values returned
         self.assertEqual(len(okvals), len(xids))
@@ -1155,16 +1197,15 @@ class ConnectionTwoPhaseTests(ConnectingTestCase):
 
         cnn = self.connect()
         cur = cnn.cursor()
-        cur.execute("select gid from pg_prepared_xacts where database = %s;",
-            (dbname,))
-        self.assertEqual('42_Z3RyaWQ=_YnF1YWw=', cur.fetchone()[0])
+        cur.execute("select gid from pg_prepared_xacts where database = %s;", (dbname,))
+        self.assertEqual("42_Z3RyaWQ=_YnF1YWw=", cur.fetchone()[0])
 
     @slow
     def test_xid_roundtrip(self):
         for fid, gtrid, bqual in [
             (0, "", ""),
             (42, "gtrid", "bqual"),
-            (0x7fffffff, "x" * 64, "y" * 64),
+            (0x7FFFFFFF, "x" * 64, "y" * 64),
         ]:
             cnn = self.connect()
             xid = cnn.xid(fid, gtrid, bqual)
@@ -1185,9 +1226,9 @@ class ConnectionTwoPhaseTests(ConnectingTestCase):
     @slow
     def test_unparsed_roundtrip(self):
         for tid in [
-            '',
-            'hello, world!',
-            'x' * 199,  # PostgreSQL's limit in transaction id length
+            "",
+            "hello, world!",
+            "x" * 199,  # PostgreSQL's limit in transaction id length
         ]:
             cnn = self.connect()
             cnn.tpc_begin(tid)
@@ -1205,71 +1246,71 @@ class ConnectionTwoPhaseTests(ConnectingTestCase):
             cnn.tpc_rollback(xid)
 
     def test_xid_construction(self):
-        x1 = ext.Xid(74, 'foo', 'bar')
+        x1 = ext.Xid(74, "foo", "bar")
         self.assertEqual(74, x1.format_id)
-        self.assertEqual('foo', x1.gtrid)
-        self.assertEqual('bar', x1.bqual)
+        self.assertEqual("foo", x1.gtrid)
+        self.assertEqual("bar", x1.bqual)
 
     def test_xid_from_string(self):
-        x2 = ext.Xid.from_string('42_Z3RyaWQ=_YnF1YWw=')
+        x2 = ext.Xid.from_string("42_Z3RyaWQ=_YnF1YWw=")
         self.assertEqual(42, x2.format_id)
-        self.assertEqual('gtrid', x2.gtrid)
-        self.assertEqual('bqual', x2.bqual)
+        self.assertEqual("gtrid", x2.gtrid)
+        self.assertEqual("bqual", x2.bqual)
 
-        x3 = ext.Xid.from_string('99_xxx_yyy')
+        x3 = ext.Xid.from_string("99_xxx_yyy")
         self.assertEqual(None, x3.format_id)
-        self.assertEqual('99_xxx_yyy', x3.gtrid)
+        self.assertEqual("99_xxx_yyy", x3.gtrid)
         self.assertEqual(None, x3.bqual)
 
     def test_xid_to_string(self):
-        x1 = ext.Xid.from_string('42_Z3RyaWQ=_YnF1YWw=')
-        self.assertEqual(str(x1), '42_Z3RyaWQ=_YnF1YWw=')
+        x1 = ext.Xid.from_string("42_Z3RyaWQ=_YnF1YWw=")
+        self.assertEqual(str(x1), "42_Z3RyaWQ=_YnF1YWw=")
 
-        x2 = ext.Xid.from_string('99_xxx_yyy')
-        self.assertEqual(str(x2), '99_xxx_yyy')
+        x2 = ext.Xid.from_string("99_xxx_yyy")
+        self.assertEqual(str(x2), "99_xxx_yyy")
 
     def test_xid_unicode(self):
         cnn = self.connect()
-        x1 = cnn.xid(10, u'uni', u'code')
+        x1 = cnn.xid(10, u"uni", u"code")
         cnn.tpc_begin(x1)
         cnn.tpc_prepare()
         cnn.reset()
         xid = [x for x in cnn.tpc_recover() if x.database == dbname][0]
         self.assertEqual(10, xid.format_id)
-        self.assertEqual('uni', xid.gtrid)
-        self.assertEqual('code', xid.bqual)
+        self.assertEqual("uni", xid.gtrid)
+        self.assertEqual("code", xid.bqual)
 
     def test_xid_unicode_unparsed(self):
         # We don't expect people shooting snowmen as transaction ids,
         # so if something explodes in an encode error I don't mind.
         # Let's just check uniconde is accepted as type.
         cnn = self.connect()
-        cnn.set_client_encoding('utf8')
+        cnn.set_client_encoding("utf8")
         cnn.tpc_begin(u"transaction-id")
         cnn.tpc_prepare()
         cnn.reset()
 
         xid = [x for x in cnn.tpc_recover() if x.database == dbname][0]
         self.assertEqual(None, xid.format_id)
-        self.assertEqual('transaction-id', xid.gtrid)
+        self.assertEqual("transaction-id", xid.gtrid)
         self.assertEqual(None, xid.bqual)
 
     def test_cancel_fails_prepared(self):
         cnn = self.connect()
-        cnn.tpc_begin('cancel')
+        cnn.tpc_begin("cancel")
         cnn.tpc_prepare()
         self.assertRaises(psycopg2.ProgrammingError, cnn.cancel)
 
     def test_tpc_recover_non_dbapi_connection(self):
         cnn = self.connect(connection_factory=psycopg2.extras.RealDictConnection)
-        cnn.tpc_begin('dict-connection')
+        cnn.tpc_begin("dict-connection")
         cnn.tpc_prepare()
         cnn.reset()
 
         xids = cnn.tpc_recover()
         xid = [x for x in xids if x.database == dbname][0]
         self.assertEqual(None, xid.format_id)
-        self.assertEqual('dict-connection', xid.gtrid)
+        self.assertEqual("dict-connection", xid.gtrid)
         self.assertEqual(None, xid.bqual)
 
 
@@ -1277,81 +1318,81 @@ class ConnectionTwoPhaseTests(ConnectingTestCase):
 class TransactionControlTests(ConnectingTestCase):
     def test_closed(self):
         self.conn.close()
-        self.assertRaises(psycopg2.InterfaceError,
+        self.assertRaises(
+            psycopg2.InterfaceError,
             self.conn.set_session,
-            ext.ISOLATION_LEVEL_SERIALIZABLE)
+            ext.ISOLATION_LEVEL_SERIALIZABLE,
+        )
 
     def test_not_in_transaction(self):
         cur = self.conn.cursor()
         cur.execute("select 1")
-        self.assertRaises(psycopg2.ProgrammingError,
+        self.assertRaises(
+            psycopg2.ProgrammingError,
             self.conn.set_session,
-            ext.ISOLATION_LEVEL_SERIALIZABLE)
+            ext.ISOLATION_LEVEL_SERIALIZABLE,
+        )
 
     def test_set_isolation_level(self):
         cur = self.conn.cursor()
-        self.conn.set_session(
-            ext.ISOLATION_LEVEL_SERIALIZABLE)
+        self.conn.set_session(ext.ISOLATION_LEVEL_SERIALIZABLE)
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'serializable')
+        self.assertEqual(cur.fetchone()[0], "serializable")
         self.conn.rollback()
 
-        self.conn.set_session(
-            ext.ISOLATION_LEVEL_REPEATABLE_READ)
+        self.conn.set_session(ext.ISOLATION_LEVEL_REPEATABLE_READ)
         cur.execute("SHOW transaction_isolation;")
         if self.conn.info.server_version > 80000:
-            self.assertEqual(cur.fetchone()[0], 'repeatable read')
+            self.assertEqual(cur.fetchone()[0], "repeatable read")
         else:
-            self.assertEqual(cur.fetchone()[0], 'serializable')
+            self.assertEqual(cur.fetchone()[0], "serializable")
         self.conn.rollback()
 
-        self.conn.set_session(
-            isolation_level=ext.ISOLATION_LEVEL_READ_COMMITTED)
+        self.conn.set_session(isolation_level=ext.ISOLATION_LEVEL_READ_COMMITTED)
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'read committed')
+        self.assertEqual(cur.fetchone()[0], "read committed")
         self.conn.rollback()
 
-        self.conn.set_session(
-            isolation_level=ext.ISOLATION_LEVEL_READ_UNCOMMITTED)
+        self.conn.set_session(isolation_level=ext.ISOLATION_LEVEL_READ_UNCOMMITTED)
         cur.execute("SHOW transaction_isolation;")
         if self.conn.info.server_version > 80000:
-            self.assertEqual(cur.fetchone()[0], 'read uncommitted')
+            self.assertEqual(cur.fetchone()[0], "read uncommitted")
         else:
-            self.assertEqual(cur.fetchone()[0], 'read committed')
+            self.assertEqual(cur.fetchone()[0], "read committed")
         self.conn.rollback()
 
     def test_set_isolation_level_str(self):
         cur = self.conn.cursor()
         self.conn.set_session("serializable")
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'serializable')
+        self.assertEqual(cur.fetchone()[0], "serializable")
         self.conn.rollback()
 
         self.conn.set_session("repeatable read")
         cur.execute("SHOW transaction_isolation;")
         if self.conn.info.server_version > 80000:
-            self.assertEqual(cur.fetchone()[0], 'repeatable read')
+            self.assertEqual(cur.fetchone()[0], "repeatable read")
         else:
-            self.assertEqual(cur.fetchone()[0], 'serializable')
+            self.assertEqual(cur.fetchone()[0], "serializable")
         self.conn.rollback()
 
         self.conn.set_session("read committed")
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'read committed')
+        self.assertEqual(cur.fetchone()[0], "read committed")
         self.conn.rollback()
 
         self.conn.set_session("read uncommitted")
         cur.execute("SHOW transaction_isolation;")
         if self.conn.info.server_version > 80000:
-            self.assertEqual(cur.fetchone()[0], 'read uncommitted')
+            self.assertEqual(cur.fetchone()[0], "read uncommitted")
         else:
-            self.assertEqual(cur.fetchone()[0], 'read committed')
+            self.assertEqual(cur.fetchone()[0], "read committed")
         self.conn.rollback()
 
     def test_bad_isolation_level(self):
         self.assertRaises(ValueError, self.conn.set_session, 0)
         self.assertRaises(ValueError, self.conn.set_session, 5)
-        self.assertRaises(ValueError, self.conn.set_session, 'whatever')
+        self.assertRaises(ValueError, self.conn.set_session, "whatever")
 
     def test_set_read_only(self):
         self.assert_(self.conn.readonly is None)
@@ -1360,16 +1401,16 @@ class TransactionControlTests(ConnectingTestCase):
         self.conn.set_session(readonly=True)
         self.assert_(self.conn.readonly is True)
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
         self.conn.rollback()
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
         self.conn.rollback()
 
         self.conn.set_session(readonly=False)
         self.assert_(self.conn.readonly is False)
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'off')
+        self.assertEqual(cur.fetchone()[0], "off")
         self.conn.rollback()
 
     def test_setattr_read_only(self):
@@ -1377,26 +1418,27 @@ class TransactionControlTests(ConnectingTestCase):
         self.conn.readonly = True
         self.assert_(self.conn.readonly is True)
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
-        self.assertRaises(self.conn.ProgrammingError,
-            setattr, self.conn, 'readonly', False)
+        self.assertEqual(cur.fetchone()[0], "on")
+        self.assertRaises(
+            self.conn.ProgrammingError, setattr, self.conn, "readonly", False
+        )
         self.assert_(self.conn.readonly is True)
         self.conn.rollback()
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
         self.conn.rollback()
 
         cur = self.conn.cursor()
         self.conn.readonly = None
         self.assert_(self.conn.readonly is None)
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'off')  # assume defined by server
+        self.assertEqual(cur.fetchone()[0], "off")  # assume defined by server
         self.conn.rollback()
 
         self.conn.readonly = False
         self.assert_(self.conn.readonly is False)
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'off')
+        self.assertEqual(cur.fetchone()[0], "off")
         self.conn.rollback()
 
     def test_set_default(self):
@@ -1407,8 +1449,8 @@ class TransactionControlTests(ConnectingTestCase):
         readonly = cur.fetchone()[0]
         self.conn.rollback()
 
-        self.conn.set_session(isolation_level='serializable', readonly=True)
-        self.conn.set_session(isolation_level='default', readonly='default')
+        self.conn.set_session(isolation_level="serializable", readonly=True)
+        self.conn.set_session(isolation_level="default", readonly="default")
 
         cur.execute("SHOW transaction_isolation;")
         self.assertEqual(cur.fetchone()[0], isolevel)
@@ -1422,28 +1464,33 @@ class TransactionControlTests(ConnectingTestCase):
         self.conn.set_session(readonly=True, deferrable=True)
         self.assert_(self.conn.deferrable is True)
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
         cur.execute("SHOW transaction_deferrable;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
         self.conn.rollback()
         cur.execute("SHOW transaction_deferrable;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
         self.conn.rollback()
 
         self.conn.set_session(deferrable=False)
         self.assert_(self.conn.deferrable is False)
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
         cur.execute("SHOW transaction_deferrable;")
-        self.assertEqual(cur.fetchone()[0], 'off')
+        self.assertEqual(cur.fetchone()[0], "off")
         self.conn.rollback()
 
     @skip_after_postgres(9, 1)
     def test_set_deferrable_error(self):
-        self.assertRaises(psycopg2.ProgrammingError,
-            self.conn.set_session, readonly=True, deferrable=True)
-        self.assertRaises(psycopg2.ProgrammingError,
-            setattr, self.conn, 'deferrable', True)
+        self.assertRaises(
+            psycopg2.ProgrammingError,
+            self.conn.set_session,
+            readonly=True,
+            deferrable=True,
+        )
+        self.assertRaises(
+            psycopg2.ProgrammingError, setattr, self.conn, "deferrable", True
+        )
 
     @skip_before_postgres(9, 1)
     def test_setattr_deferrable(self):
@@ -1451,26 +1498,27 @@ class TransactionControlTests(ConnectingTestCase):
         self.conn.deferrable = True
         self.assert_(self.conn.deferrable is True)
         cur.execute("SHOW transaction_deferrable;")
-        self.assertEqual(cur.fetchone()[0], 'on')
-        self.assertRaises(self.conn.ProgrammingError,
-            setattr, self.conn, 'deferrable', False)
+        self.assertEqual(cur.fetchone()[0], "on")
+        self.assertRaises(
+            self.conn.ProgrammingError, setattr, self.conn, "deferrable", False
+        )
         self.assert_(self.conn.deferrable is True)
         self.conn.rollback()
         cur.execute("SHOW transaction_deferrable;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
         self.conn.rollback()
 
         cur = self.conn.cursor()
         self.conn.deferrable = None
         self.assert_(self.conn.deferrable is None)
         cur.execute("SHOW transaction_deferrable;")
-        self.assertEqual(cur.fetchone()[0], 'off')  # assume defined by server
+        self.assertEqual(cur.fetchone()[0], "off")  # assume defined by server
         self.conn.rollback()
 
         self.conn.deferrable = False
         self.assert_(self.conn.deferrable is False)
         cur.execute("SHOW transaction_deferrable;")
-        self.assertEqual(cur.fetchone()[0], 'off')
+        self.assertEqual(cur.fetchone()[0], "off")
         self.conn.rollback()
 
     def test_mixing_session_attribs(self):
@@ -1479,17 +1527,17 @@ class TransactionControlTests(ConnectingTestCase):
         self.conn.readonly = True
 
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
 
         cur.execute("SHOW default_transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
 
         self.conn.autocommit = False
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
 
         cur.execute("SHOW default_transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'off')
+        self.assertEqual(cur.fetchone()[0], "off")
 
     def test_idempotence_check(self):
         self.conn.autocommit = False
@@ -1499,7 +1547,7 @@ class TransactionControlTests(ConnectingTestCase):
 
         cur = self.conn.cursor()
         cur.execute("SHOW transaction_read_only")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
 
 
 class TestEncryptPassword(ConnectingTestCase):
@@ -1507,15 +1555,17 @@ class TestEncryptPassword(ConnectingTestCase):
     def test_encrypt_password_post_9_6(self):
         # MD5 algorithm
         self.assertEqual(
-            ext.encrypt_password('psycopg2', 'ashesh', self.conn, 'md5'),
-            'md594839d658c28a357126f105b9cb14cfc')
+            ext.encrypt_password("psycopg2", "ashesh", self.conn, "md5"),
+            "md594839d658c28a357126f105b9cb14cfc",
+        )
 
         # keywords
         self.assertEqual(
             ext.encrypt_password(
-                password='psycopg2', user='ashesh',
-                scope=self.conn, algorithm='md5'),
-            'md594839d658c28a357126f105b9cb14cfc')
+                password="psycopg2", user="ashesh", scope=self.conn, algorithm="md5"
+            ),
+            "md594839d658c28a357126f105b9cb14cfc",
+        )
 
     @skip_before_libpq(10)
     @skip_before_postgres(10)
@@ -1524,69 +1574,92 @@ class TestEncryptPassword(ConnectingTestCase):
         cur.execute("SHOW password_encryption;")
         server_encryption_algorithm = cur.fetchone()[0]
 
-        enc_password = ext.encrypt_password(
-            'psycopg2', 'ashesh', self.conn)
+        enc_password = ext.encrypt_password("psycopg2", "ashesh", self.conn)
 
-        if server_encryption_algorithm == 'md5':
-            self.assertEqual(
-                enc_password, 'md594839d658c28a357126f105b9cb14cfc')
-        elif server_encryption_algorithm == 'scram-sha-256':
-            self.assertEqual(enc_password[:14], 'SCRAM-SHA-256$')
+        if server_encryption_algorithm == "md5":
+            self.assertEqual(enc_password, "md594839d658c28a357126f105b9cb14cfc")
+        elif server_encryption_algorithm == "scram-sha-256":
+            self.assertEqual(enc_password[:14], "SCRAM-SHA-256$")
 
         self.assertEqual(
-            ext.encrypt_password(
-                'psycopg2', 'ashesh', self.conn, 'scram-sha-256'
-            )[:14], 'SCRAM-SHA-256$')
+            ext.encrypt_password("psycopg2", "ashesh", self.conn, "scram-sha-256")[:14],
+            "SCRAM-SHA-256$",
+        )
 
-        self.assertRaises(psycopg2.ProgrammingError,
-            ext.encrypt_password, 'psycopg2', 'ashesh', self.conn, 'abc')
+        self.assertRaises(
+            psycopg2.ProgrammingError,
+            ext.encrypt_password,
+            "psycopg2",
+            "ashesh",
+            self.conn,
+            "abc",
+        )
 
     def test_encrypt_md5(self):
         self.assertEqual(
-            ext.encrypt_password('psycopg2', 'ashesh', algorithm='md5'),
-            'md594839d658c28a357126f105b9cb14cfc')
+            ext.encrypt_password("psycopg2", "ashesh", algorithm="md5"),
+            "md594839d658c28a357126f105b9cb14cfc",
+        )
 
     @skip_before_libpq(10)
     def test_encrypt_bad_libpq_10(self):
-        self.assertRaises(psycopg2.ProgrammingError,
-            ext.encrypt_password, 'psycopg2', 'ashesh', self.conn, 'abc')
+        self.assertRaises(
+            psycopg2.ProgrammingError,
+            ext.encrypt_password,
+            "psycopg2",
+            "ashesh",
+            self.conn,
+            "abc",
+        )
 
     @skip_after_libpq(10)
     def test_encrypt_bad_before_libpq_10(self):
-        self.assertRaises(psycopg2.NotSupportedError,
-            ext.encrypt_password, 'psycopg2', 'ashesh', self.conn, 'abc')
+        self.assertRaises(
+            psycopg2.NotSupportedError,
+            ext.encrypt_password,
+            "psycopg2",
+            "ashesh",
+            self.conn,
+            "abc",
+        )
 
     @skip_before_libpq(10)
     def test_encrypt_scram(self):
         self.assert_(
             ext.encrypt_password(
-                'psycopg2', 'ashesh', self.conn, 'scram-sha-256')
-            .startswith('SCRAM-SHA-256$'))
+                "psycopg2", "ashesh", self.conn, "scram-sha-256"
+            ).startswith("SCRAM-SHA-256$")
+        )
 
     @skip_after_libpq(10)
     def test_encrypt_scram_pre_10(self):
-        self.assertRaises(psycopg2.NotSupportedError,
+        self.assertRaises(
+            psycopg2.NotSupportedError,
             ext.encrypt_password,
-            password='psycopg2', user='ashesh',
-            scope=self.conn, algorithm='scram-sha-256')
+            password="psycopg2",
+            user="ashesh",
+            scope=self.conn,
+            algorithm="scram-sha-256",
+        )
 
     def test_bad_types(self):
         self.assertRaises(TypeError, ext.encrypt_password)
-        self.assertRaises(TypeError, ext.encrypt_password,
-            'password', 42, self.conn, 'md5')
-        self.assertRaises(TypeError, ext.encrypt_password,
-            42, 'user', self.conn, 'md5')
-        self.assertRaises(TypeError, ext.encrypt_password,
-            42, 'user', 'wat', 'abc')
-        self.assertRaises(TypeError, ext.encrypt_password,
-            'password', 'user', 'wat', 42)
+        self.assertRaises(
+            TypeError, ext.encrypt_password, "password", 42, self.conn, "md5"
+        )
+        self.assertRaises(TypeError, ext.encrypt_password, 42, "user", self.conn, "md5")
+        self.assertRaises(TypeError, ext.encrypt_password, 42, "user", "wat", "abc")
+        self.assertRaises(
+            TypeError, ext.encrypt_password, "password", "user", "wat", 42
+        )
 
 
 class AutocommitTests(ConnectingTestCase):
     def test_closed(self):
         self.conn.close()
-        self.assertRaises(psycopg2.InterfaceError,
-            setattr, self.conn, 'autocommit', True)
+        self.assertRaises(
+            psycopg2.InterfaceError, setattr, self.conn, "autocommit", True
+        )
 
         # The getter doesn't have a guard. We may change this in future
         # to make it consistent with other methods; meanwhile let's just check
@@ -1599,85 +1672,80 @@ class AutocommitTests(ConnectingTestCase):
     def test_default_no_autocommit(self):
         self.assert_(not self.conn.autocommit)
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
 
         cur = self.conn.cursor()
-        cur.execute('select 1;')
+        cur.execute("select 1;")
         self.assertEqual(self.conn.status, ext.STATUS_BEGIN)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_INTRANS)
+        self.assertEqual(
+            self.conn.info.transaction_status, ext.TRANSACTION_STATUS_INTRANS
+        )
 
         self.conn.rollback()
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
 
     def test_set_autocommit(self):
         self.conn.autocommit = True
         self.assert_(self.conn.autocommit)
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
 
         cur = self.conn.cursor()
-        cur.execute('select 1;')
+        cur.execute("select 1;")
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
 
         self.conn.autocommit = False
         self.assert_(not self.conn.autocommit)
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
 
-        cur.execute('select 1;')
+        cur.execute("select 1;")
         self.assertEqual(self.conn.status, ext.STATUS_BEGIN)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_INTRANS)
+        self.assertEqual(
+            self.conn.info.transaction_status, ext.TRANSACTION_STATUS_INTRANS
+        )
 
     def test_set_intrans_error(self):
         cur = self.conn.cursor()
-        cur.execute('select 1;')
-        self.assertRaises(psycopg2.ProgrammingError,
-            setattr, self.conn, 'autocommit', True)
+        cur.execute("select 1;")
+        self.assertRaises(
+            psycopg2.ProgrammingError, setattr, self.conn, "autocommit", True
+        )
 
     def test_set_session_autocommit(self):
         self.conn.set_session(autocommit=True)
         self.assert_(self.conn.autocommit)
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
 
         cur = self.conn.cursor()
-        cur.execute('select 1;')
+        cur.execute("select 1;")
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
 
         self.conn.set_session(autocommit=False)
         self.assert_(not self.conn.autocommit)
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
 
-        cur.execute('select 1;')
+        cur.execute("select 1;")
         self.assertEqual(self.conn.status, ext.STATUS_BEGIN)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_INTRANS)
+        self.assertEqual(
+            self.conn.info.transaction_status, ext.TRANSACTION_STATUS_INTRANS
+        )
         self.conn.rollback()
 
-        self.conn.set_session('serializable', readonly=True, autocommit=True)
+        self.conn.set_session("serializable", readonly=True, autocommit=True)
         self.assert_(self.conn.autocommit)
-        cur.execute('select 1;')
+        cur.execute("select 1;")
         self.assertEqual(self.conn.status, ext.STATUS_READY)
-        self.assertEqual(self.conn.info.transaction_status,
-            ext.TRANSACTION_STATUS_IDLE)
+        self.assertEqual(self.conn.info.transaction_status, ext.TRANSACTION_STATUS_IDLE)
         cur.execute("SHOW transaction_isolation;")
-        self.assertEqual(cur.fetchone()[0], 'serializable')
+        self.assertEqual(cur.fetchone()[0], "serializable")
         cur.execute("SHOW transaction_read_only;")
-        self.assertEqual(cur.fetchone()[0], 'on')
+        self.assertEqual(cur.fetchone()[0], "on")
 
 
 class PasswordLeakTestCase(ConnectingTestCase):
@@ -1695,7 +1763,8 @@ class PasswordLeakTestCase(ConnectingTestCase):
         def __init__(self, *args, **kwargs):
             try:
                 super(PasswordLeakTestCase.GrassingConnection, self).__init__(
-                    *args, **kwargs)
+                    *args, **kwargs
+                )
             finally:
                 # The connection is not initialized entirely, however the C
                 # code should have set the dsn, and it should have scrubbed
@@ -1704,18 +1773,24 @@ class PasswordLeakTestCase(ConnectingTestCase):
 
     @skip_if_crdb("connect any db")
     def test_leak(self):
-        self.assertRaises(psycopg2.DatabaseError,
-            self.GrassingConnection, "dbname=nosuch password=whateva")
+        self.assertRaises(
+            psycopg2.DatabaseError,
+            self.GrassingConnection,
+            "dbname=nosuch password=whateva",
+        )
         self.assertDsnEqual(self.dsn, "dbname=nosuch password=xxx")
 
     @skip_before_libpq(9, 2)
     def test_url_leak(self):
-        self.assertRaises(psycopg2.DatabaseError,
+        self.assertRaises(
+            psycopg2.DatabaseError,
             self.GrassingConnection,
-            "postgres://someone:whateva@localhost/nosuch")
+            "postgres://someone:whateva@localhost/nosuch",
+        )
 
-        self.assertDsnEqual(self.dsn,
-            "user=someone password=xxx host=localhost dbname=nosuch")
+        self.assertDsnEqual(
+            self.dsn, "user=someone password=xxx host=localhost dbname=nosuch"
+        )
 
 
 class SignalTestCase(ConnectingTestCase):
@@ -1723,19 +1798,23 @@ class SignalTestCase(ConnectingTestCase):
     @skip_before_postgres(8, 2)
     def test_bug_551_returning(self):
         # Raise an exception trying to decode 'id'
-        self._test_bug_551(query="""
+        self._test_bug_551(
+            query="""
             INSERT INTO test551 (num) VALUES (%s) RETURNING id
-            """)
+            """
+        )
 
     @slow
     def test_bug_551_no_returning(self):
         # Raise an exception trying to decode 'INSERT 0 1'
-        self._test_bug_551(query="""
+        self._test_bug_551(
+            query="""
             INSERT INTO test551 (num) VALUES (%s)
-            """)
+            """
+        )
 
     def _test_bug_551(self, query):
-        script = ("""\
+        script = """\
 import os
 import sys
 import time
@@ -1769,14 +1848,16 @@ t.start()
 
 while True:
     cur.execute(%(query)r, ("Hello, world!",))
-""" % {'dsn': dsn, 'query': query})
+""" % {
+            "dsn": dsn,
+            "query": query,
+        }
 
-        proc = sp.Popen([sys.executable, '-c', script],
-            stdout=sp.PIPE, stderr=sp.PIPE)
+        proc = sp.Popen([sys.executable, "-c", script], stdout=sp.PIPE, stderr=sp.PIPE)
         (out, err) = proc.communicate()
         self.assertNotEqual(proc.returncode, 0)
         # Strip [NNN refs] from output
-        err = re.sub(br'\[[^\]]+\]', b'', err).strip()
+        err = re.sub(br"\[[^\]]+\]", b"", err).strip()
         self.assert_(not err, err)
 
 
@@ -1813,7 +1894,7 @@ class TestConnectionInfo(ConnectingTestCase):
 
     def test_host_readonly(self):
         with self.assertRaises(AttributeError):
-            self.conn.info.host = 'override'
+            self.conn.info.host = "override"
 
     def test_port(self):
         self.assert_(isinstance(self.conn.info.port, int))
@@ -1827,8 +1908,8 @@ class TestConnectionInfo(ConnectingTestCase):
     def test_dsn_parameters(self):
         d = self.conn.info.dsn_parameters
         self.assert_(isinstance(d, dict))
-        self.assertEqual(d['dbname'], dbname)  # the only param we can check reliably
-        self.assert_('password' not in d, d)
+        self.assertEqual(d["dbname"], dbname)  # the only param we can check reliably
+        self.assert_("password" not in d, d)
 
     def test_status(self):
         self.assertEqual(self.conn.info.status, 0)
@@ -1847,14 +1928,15 @@ class TestConnectionInfo(ConnectingTestCase):
             cur.execute("show server_version")
         except psycopg2.DatabaseError:
             self.assertIsInstance(
-                self.conn.info.parameter_status('server_version'), str)
+                self.conn.info.parameter_status("server_version"), str
+            )
         else:
             self.assertEqual(
-                self.conn.info.parameter_status('server_version'),
-                cur.fetchone()[0])
+                self.conn.info.parameter_status("server_version"), cur.fetchone()[0]
+            )
 
-        self.assertIsNone(self.conn.info.parameter_status('wat'))
-        self.assertIsNone(self.bconn.info.parameter_status('server_version'))
+        self.assertIsNone(self.conn.info.parameter_status("wat"))
+        self.assertIsNone(self.bconn.info.parameter_status("server_version"))
 
     def test_protocol_version(self):
         self.assertEqual(self.conn.info.protocol_version, 3)
@@ -1867,8 +1949,7 @@ class TestConnectionInfo(ConnectingTestCase):
         except psycopg2.DatabaseError:
             self.assert_(isinstance(self.conn.info.server_version, int))
         else:
-            self.assertEqual(
-                self.conn.info.server_version, int(cur.fetchone()[0]))
+            self.assertEqual(self.conn.info.server_version, int(cur.fetchone()[0]))
 
         self.assertEqual(self.bconn.info.server_version, 0)
 
@@ -1882,7 +1963,7 @@ class TestConnectionInfo(ConnectingTestCase):
         except psycopg2.DatabaseError:
             pass
 
-        self.assert_('nosuchtable' in self.conn.info.error_message)
+        self.assert_("nosuchtable" in self.conn.info.error_message)
 
     def test_socket(self):
         self.assert_(self.conn.info.socket >= 0)
@@ -1896,8 +1977,7 @@ class TestConnectionInfo(ConnectingTestCase):
         except psycopg2.DatabaseError:
             self.assert_(self.conn.info.backend_pid > 0)
         else:
-            self.assertEqual(
-                self.conn.info.backend_pid, int(cur.fetchone()[0]))
+            self.assertEqual(self.conn.info.backend_pid, int(cur.fetchone()[0]))
 
         self.assert_(self.bconn.info.backend_pid == 0)
 
@@ -1921,7 +2001,7 @@ class TestConnectionInfo(ConnectingTestCase):
         with self.assertRaises(psycopg2.NotSupportedError):
             self.conn.info.ssl_attribute_names
         with self.assertRaises(psycopg2.NotSupportedError):
-            self.conn.info.ssl_attribute('wat')
+            self.conn.info.ssl_attribute("wat")
 
     @skip_before_libpq(9, 5)
     def test_ssl_attribute(self):
@@ -1934,7 +2014,7 @@ class TestConnectionInfo(ConnectingTestCase):
             for attrib in attribs:
                 self.assertIsNone(self.conn.info.ssl_attribute(attrib))
 
-        self.assertIsNone(self.conn.info.ssl_attribute('wat'))
+        self.assertIsNone(self.conn.info.ssl_attribute("wat"))
 
         for attrib in attribs:
             self.assertIsNone(self.bconn.info.ssl_attribute(attrib))

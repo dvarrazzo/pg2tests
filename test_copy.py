@@ -40,6 +40,7 @@ from .testconfig import dsn
 
 class MinimalRead(TextIOBase):
     """A file wrapper exposing the minimal interface to copy from."""
+
     def __init__(self, f):
         self.f = f
 
@@ -52,6 +53,7 @@ class MinimalRead(TextIOBase):
 
 class MinimalWrite(TextIOBase):
     """A file wrapper exposing the minimal interface to copy to."""
+
     def __init__(self, f):
         self.f = f
 
@@ -61,7 +63,6 @@ class MinimalWrite(TextIOBase):
 
 @skip_copy_if_green
 class CopyTests(ConnectingTestCase):
-
     def setUp(self):
         ConnectingTestCase.setUp(self)
         self._create_temp_table()
@@ -69,11 +70,13 @@ class CopyTests(ConnectingTestCase):
     def _create_temp_table(self):
         skip_if_crdb("copy", self.conn)
         curs = self.conn.cursor()
-        curs.execute('''
+        curs.execute(
+            """
             CREATE TEMPORARY TABLE tcopy (
               id serial PRIMARY KEY,
               data text
-            )''')
+            )"""
+        )
 
     @slow
     def test_copy_from(self):
@@ -88,8 +91,9 @@ class CopyTests(ConnectingTestCase):
         # Trying to trigger a "would block" error
         curs = self.conn.cursor()
         try:
-            self._copy_from(curs, nrecs=10 * 1024, srec=10 * 1024,
-                copykw={'size': 20 * 1024 * 1024})
+            self._copy_from(
+                curs, nrecs=10 * 1024, srec=10 * 1024, copykw={"size": 20 * 1024 * 1024}
+            )
         finally:
             curs.close()
 
@@ -100,7 +104,7 @@ class CopyTests(ConnectingTestCase):
             f.write("%s\n" % (i,))
 
         f.seek(0)
-        curs.copy_from(MinimalRead(f), "tcopy", columns=['id'])
+        curs.copy_from(MinimalRead(f), "tcopy", columns=["id"])
 
         curs.execute("select * from tcopy order by id")
         self.assertEqual([(i, None) for i in range(10)], curs.fetchall())
@@ -115,10 +119,11 @@ class CopyTests(ConnectingTestCase):
 
         def cols():
             raise ZeroDivisionError()
-            yield 'id'
+            yield "id"
 
-        self.assertRaises(ZeroDivisionError,
-            curs.copy_from, MinimalRead(f), "tcopy", columns=cols())
+        self.assertRaises(
+            ZeroDivisionError, curs.copy_from, MinimalRead(f), "tcopy", columns=cols()
+        )
 
     @slow
     def test_copy_to(self):
@@ -130,76 +135,70 @@ class CopyTests(ConnectingTestCase):
             curs.close()
 
     def test_copy_text(self):
-        self.conn.set_client_encoding('latin1')
+        self.conn.set_client_encoding("latin1")
         self._create_temp_table()  # the above call closed the xn
 
         if PY2:
-            abin = ''.join(map(chr, range(32, 127) + range(160, 256)))
-            about = abin.decode('latin1').replace('\\', '\\\\')
+            abin = "".join(map(chr, range(32, 127) + range(160, 256)))
+            about = abin.decode("latin1").replace("\\", "\\\\")
 
         else:
-            abin = bytes(list(range(32, 127))
-                + list(range(160, 256))).decode('latin1')
-            about = abin.replace('\\', '\\\\')
+            abin = bytes(list(range(32, 127)) + list(range(160, 256))).decode("latin1")
+            about = abin.replace("\\", "\\\\")
 
         curs = self.conn.cursor()
-        curs.execute('insert into tcopy values (%s, %s)',
-            (42, abin))
+        curs.execute("insert into tcopy values (%s, %s)", (42, abin))
 
         f = io.StringIO()
-        curs.copy_to(f, 'tcopy', columns=('data',))
+        curs.copy_to(f, "tcopy", columns=("data",))
         f.seek(0)
         self.assertEqual(f.readline().rstrip(), about)
 
     def test_copy_bytes(self):
-        self.conn.set_client_encoding('latin1')
+        self.conn.set_client_encoding("latin1")
         self._create_temp_table()  # the above call closed the xn
 
         if PY2:
-            abin = ''.join(map(chr, range(32, 127) + range(160, 255)))
-            about = abin.replace('\\', '\\\\')
+            abin = "".join(map(chr, range(32, 127) + range(160, 255)))
+            about = abin.replace("\\", "\\\\")
         else:
-            abin = bytes(list(range(32, 127))
-                + list(range(160, 255))).decode('latin1')
-            about = abin.replace('\\', '\\\\').encode('latin1')
+            abin = bytes(list(range(32, 127)) + list(range(160, 255))).decode("latin1")
+            about = abin.replace("\\", "\\\\").encode("latin1")
 
         curs = self.conn.cursor()
-        curs.execute('insert into tcopy values (%s, %s)',
-            (42, abin))
+        curs.execute("insert into tcopy values (%s, %s)", (42, abin))
 
         f = io.BytesIO()
-        curs.copy_to(f, 'tcopy', columns=('data',))
+        curs.copy_to(f, "tcopy", columns=("data",))
         f.seek(0)
         self.assertEqual(f.readline().rstrip(), about)
 
     def test_copy_expert_textiobase(self):
-        self.conn.set_client_encoding('latin1')
+        self.conn.set_client_encoding("latin1")
         self._create_temp_table()  # the above call closed the xn
 
         if PY2:
-            abin = ''.join(map(chr, range(32, 127) + range(160, 256)))
-            abin = abin.decode('latin1')
-            about = abin.replace('\\', '\\\\')
+            abin = "".join(map(chr, range(32, 127) + range(160, 256)))
+            abin = abin.decode("latin1")
+            about = abin.replace("\\", "\\\\")
 
         else:
-            abin = bytes(list(range(32, 127))
-                + list(range(160, 256))).decode('latin1')
-            about = abin.replace('\\', '\\\\')
+            abin = bytes(list(range(32, 127)) + list(range(160, 256))).decode("latin1")
+            about = abin.replace("\\", "\\\\")
 
         f = io.StringIO()
         f.write(about)
         f.seek(0)
 
         curs = self.conn.cursor()
-        psycopg2.extensions.register_type(
-            psycopg2.extensions.UNICODE, curs)
+        psycopg2.extensions.register_type(psycopg2.extensions.UNICODE, curs)
 
-        curs.copy_expert('COPY tcopy (data) FROM STDIN', f)
+        curs.copy_expert("COPY tcopy (data) FROM STDIN", f)
         curs.execute("select data from tcopy;")
         self.assertEqual(curs.fetchone()[0], abin)
 
         f = io.StringIO()
-        curs.copy_expert('COPY tcopy (data) TO STDOUT', f)
+        curs.copy_expert("COPY tcopy (data) TO STDOUT", f)
         f.seek(0)
         self.assertEqual(f.readline().rstrip(), about)
 
@@ -216,7 +215,7 @@ class CopyTests(ConnectingTestCase):
             return real_read(_size)
 
         f.read = read
-        curs.copy_expert('COPY tcopy (data) FROM STDIN', f, size=exp_size)
+        curs.copy_expert("COPY tcopy (data) FROM STDIN", f, size=exp_size)
         curs.execute("select data from tcopy;")
         self.assertEqual(curs.fetchone()[0], abin)
 
@@ -232,8 +231,10 @@ class CopyTests(ConnectingTestCase):
         curs.execute("select count(*) from tcopy")
         self.assertEqual(nrecs, curs.fetchone()[0])
 
-        curs.execute("select data from tcopy where id < %s order by id",
-                (len(string.ascii_letters),))
+        curs.execute(
+            "select data from tcopy where id < %s order by id",
+            (len(string.ascii_letters),),
+        )
         for i, (l,) in enumerate(curs):
             self.assertEqual(l, string.ascii_letters[i] * srec)
 
@@ -257,37 +258,38 @@ class CopyTests(ConnectingTestCase):
 
         f = Whatever()
         curs = self.conn.cursor()
-        self.assertRaises(TypeError,
-            curs.copy_expert, 'COPY tcopy (data) FROM STDIN', f)
+        self.assertRaises(
+            TypeError, curs.copy_expert, "COPY tcopy (data) FROM STDIN", f
+        )
 
     def test_copy_no_column_limit(self):
         cols = ["c%050d" % i for i in range(200)]
 
         curs = self.conn.cursor()
-        curs.execute('CREATE TEMPORARY TABLE manycols (%s)' % ',\n'.join(
-            ["%s int" % c for c in cols]))
+        curs.execute(
+            "CREATE TEMPORARY TABLE manycols (%s)"
+            % ",\n".join(["%s int" % c for c in cols])
+        )
         curs.execute("INSERT INTO manycols DEFAULT VALUES")
 
         f = StringIO()
         curs.copy_to(f, "manycols", columns=cols)
         f.seek(0)
-        self.assertEqual(f.read().split(), ['\\N'] * len(cols))
+        self.assertEqual(f.read().split(), ["\\N"] * len(cols))
 
         f.seek(0)
         curs.copy_from(f, "manycols", columns=cols)
         curs.execute("select count(*) from manycols;")
         self.assertEqual(curs.fetchone()[0], 2)
 
-    @skip_before_postgres(8, 2)     # they don't send the count
+    @skip_before_postgres(8, 2)  # they don't send the count
     def test_copy_rowcount(self):
         curs = self.conn.cursor()
 
-        curs.copy_from(StringIO('aaa\nbbb\nccc\n'), 'tcopy', columns=['data'])
+        curs.copy_from(StringIO("aaa\nbbb\nccc\n"), "tcopy", columns=["data"])
         self.assertEqual(curs.rowcount, 3)
 
-        curs.copy_expert(
-            "copy tcopy (data) from stdin",
-            StringIO('ddd\neee\n'))
+        curs.copy_expert("copy tcopy (data) from stdin", StringIO("ddd\neee\n"))
         self.assertEqual(curs.rowcount, 2)
 
         curs.copy_to(StringIO(), "tcopy")
@@ -303,20 +305,19 @@ class CopyTests(ConnectingTestCase):
         curs.execute("insert into tcopy (data) values ('fff')")
         self.assertEqual(curs.rowcount, 1)
 
-        self.assertRaises(psycopg2.DataError,
-            curs.copy_from, StringIO('aaa\nbbb\nccc\n'), 'tcopy')
+        self.assertRaises(
+            psycopg2.DataError, curs.copy_from, StringIO("aaa\nbbb\nccc\n"), "tcopy"
+        )
         self.assertEqual(curs.rowcount, -1)
 
     def test_copy_query(self):
         curs = self.conn.cursor()
 
-        curs.copy_from(StringIO('aaa\nbbb\nccc\n'), 'tcopy', columns=['data'])
+        curs.copy_from(StringIO("aaa\nbbb\nccc\n"), "tcopy", columns=["data"])
         self.assert_(b"copy " in curs.query.lower())
         self.assert_(b" from stdin" in curs.query.lower())
 
-        curs.copy_expert(
-            "copy tcopy (data) from stdin",
-            StringIO('ddd\neee\n'))
+        curs.copy_expert("copy tcopy (data) from stdin", StringIO("ddd\neee\n"))
         self.assert_(b"copy " in curs.query.lower())
         self.assert_(b" from stdin" in curs.query.lower())
 
@@ -332,7 +333,7 @@ class CopyTests(ConnectingTestCase):
     @slow
     def test_copy_from_segfault(self):
         # issue #219
-        script = ("""\
+        script = """\
 import psycopg2
 conn = psycopg2.connect(%(dsn)r)
 curs = conn.cursor()
@@ -342,16 +343,18 @@ try:
 except psycopg2.ProgrammingError:
     pass
 conn.close()
-""" % {'dsn': dsn})
+""" % {
+            "dsn": dsn
+        }
 
-        proc = Popen([sys.executable, '-c', script])
+        proc = Popen([sys.executable, "-c", script])
         proc.communicate()
         self.assertEqual(0, proc.returncode)
 
     @slow
     def test_copy_to_segfault(self):
         # issue #219
-        script = ("""\
+        script = """\
 import psycopg2
 conn = psycopg2.connect(%(dsn)r)
 curs = conn.cursor()
@@ -361,9 +364,11 @@ try:
 except psycopg2.ProgrammingError:
     pass
 conn.close()
-""" % {'dsn': dsn})
+""" % {
+            "dsn": dsn
+        }
 
-        proc = Popen([sys.executable, '-c', script], stdout=PIPE)
+        proc = Popen([sys.executable, "-c", script], stdout=PIPE)
         proc.communicate()
         self.assertEqual(0, proc.returncode)
 
@@ -382,7 +387,7 @@ conn.close()
         try:
             curs.copy_from(BrokenRead(), "tcopy")
         except Exception as e:
-            self.assert_('ZeroDivisionError' in str(e))
+            self.assert_("ZeroDivisionError" in str(e))
 
     def test_copy_to_propagate_error(self):
         class BrokenWrite(TextIOBase):
@@ -391,8 +396,7 @@ conn.close()
 
         curs = self.conn.cursor()
         curs.execute("insert into tcopy values (10, 'hi')")
-        self.assertRaises(ZeroDivisionError,
-            curs.copy_to, BrokenWrite(), "tcopy")
+        self.assertRaises(ZeroDivisionError, curs.copy_to, BrokenWrite(), "tcopy")
 
 
 def test_suite():

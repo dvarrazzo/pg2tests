@@ -38,6 +38,7 @@ from .testutils import skip_if_crdb
 
 class ConnectionStub(object):
     """A `connection` wrapper allowing analysis of the `poll()` calls."""
+
     def __init__(self, conn):
         self.conn = conn
         self.polls = []
@@ -64,7 +65,8 @@ class GreenTestCase(ConnectingTestCase):
     def set_stub_wait_callback(self, conn, cb=None):
         stub = ConnectionStub(conn)
         psycopg2.extensions.set_wait_callback(
-            lambda conn: (cb or psycopg2.extras.wait_select)(stub))
+            lambda conn: (cb or psycopg2.extras.wait_select)(stub)
+        )
         return stub
 
     @slow
@@ -77,7 +79,7 @@ class GreenTestCase(ConnectingTestCase):
         for mb in 1, 5, 10, 20, 50:
             size = mb * 1024 * 1024
             del stub.polls[:]
-            curs.execute("select %s;", ('x' * size,))
+            curs.execute("select %s;", ("x" * size,))
             self.assertEqual(size, len(curs.fetchone()[0]))
             if stub.polls.count(psycopg2.extensions.POLL_WRITE) > 1:
                 return
@@ -108,8 +110,9 @@ class GreenTestCase(ConnectingTestCase):
         # the connection
         conn = self.conn
         curs = conn.cursor()
-        self.assertRaises(psycopg2.ProgrammingError,
-            curs.execute, "select the unselectable")
+        self.assertRaises(
+            psycopg2.ProgrammingError, curs.execute, "select the unselectable"
+        )
 
         # check that the connection is left in an usable state
         self.assert_(not conn.closed)
@@ -120,8 +123,9 @@ class GreenTestCase(ConnectingTestCase):
     @skip_before_postgres(8, 2)
     def test_copy_no_hang(self):
         cur = self.conn.cursor()
-        self.assertRaises(psycopg2.ProgrammingError,
-            cur.execute, "copy (select 1) to stdout")
+        self.assertRaises(
+            psycopg2.ProgrammingError, cur.execute, "copy (select 1) to stdout"
+        )
 
     @slow
     @skip_if_crdb("notice")
@@ -141,7 +145,8 @@ class GreenTestCase(ConnectingTestCase):
 
         stub = self.set_stub_wait_callback(self.conn, wait)
         cur = self.conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             select 1;
             do $$
                 begin
@@ -149,7 +154,8 @@ class GreenTestCase(ConnectingTestCase):
                 end
             $$ language plpgsql;
             select pg_sleep(1);
-            """)
+            """
+        )
 
         polls = stub.polls.count(POLL_READ)
         self.assert_(polls > 8, polls)
@@ -224,7 +230,7 @@ class CallbackErrorTestCase(ConnectingTestCase):
         for i in range(100):
             self.to_error = None
             cnn = self.connect()
-            cur = cnn.cursor('foo')
+            cur = cnn.cursor("foo")
             self.to_error = i
             try:
                 cur.execute("select 1")

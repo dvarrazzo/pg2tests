@@ -33,12 +33,19 @@ import psycopg2
 import psycopg2.errors
 from psycopg2 import extensions as ext
 
-from .testutils import (ConnectingTestCase, StringIO, skip_before_postgres,
-    skip_if_crdb, crdb_version, slow)
+from .testutils import (
+    ConnectingTestCase,
+    StringIO,
+    skip_before_postgres,
+    skip_if_crdb,
+    crdb_version,
+    slow,
+)
 
 
 class PollableStub(object):
     """A 'pollable' wrapper allowing analysis of the `poll()` calls."""
+
     def __init__(self, pollable):
         self.pollable = pollable
         self.polls = []
@@ -53,7 +60,6 @@ class PollableStub(object):
 
 
 class AsyncTests(ConnectingTestCase):
-
     def setUp(self):
         ConnectingTestCase.setUp(self)
 
@@ -67,10 +73,12 @@ class AsyncTests(ConnectingTestCase):
             curs.execute("set experimental_enable_temp_tables = 'on'")
             self.wait(curs)
 
-        curs.execute('''
+        curs.execute(
+            """
             CREATE TEMPORARY TABLE table1 (
               id int PRIMARY KEY
-            )''')
+            )"""
+        )
         self.wait(curs)
 
     def test_connection_setup(self):
@@ -91,8 +99,7 @@ class AsyncTests(ConnectingTestCase):
         self.assert_(self.conn.encoding in ext.encodings)
 
     def test_async_named_cursor(self):
-        self.assertRaises(psycopg2.ProgrammingError,
-                          self.conn.cursor, "name")
+        self.assertRaises(psycopg2.ProgrammingError, self.conn.cursor, "name")
 
     def test_async_select(self):
         cur = self.conn.cursor()
@@ -109,7 +116,7 @@ class AsyncTests(ConnectingTestCase):
     @skip_before_postgres(8, 2)
     def test_async_callproc(self):
         cur = self.conn.cursor()
-        cur.callproc("pg_sleep", (0.1, ))
+        cur.callproc("pg_sleep", (0.1,))
         self.assertTrue(self.conn.isexecuting())
 
         self.wait(cur)
@@ -124,11 +131,11 @@ class AsyncTests(ConnectingTestCase):
         cur.execute("insert into table1 values (1)")
 
         # an async execute after an async one raises an exception
-        self.assertRaises(psycopg2.ProgrammingError,
-                          cur.execute, "select * from table1")
+        self.assertRaises(
+            psycopg2.ProgrammingError, cur.execute, "select * from table1"
+        )
         # same for callproc
-        self.assertRaises(psycopg2.ProgrammingError,
-                          cur.callproc, "version")
+        self.assertRaises(psycopg2.ProgrammingError, cur.callproc, "version")
         # but after you've waited it should be good
         self.wait(cur)
         cur.execute("select * from table1")
@@ -149,8 +156,7 @@ class AsyncTests(ConnectingTestCase):
         cur.execute("select 'a'")
 
         # a fetch after an asynchronous query should raise an error
-        self.assertRaises(psycopg2.ProgrammingError,
-                          cur.fetchall)
+        self.assertRaises(psycopg2.ProgrammingError, cur.fetchall)
         # but after waiting it should work
         self.wait(cur)
         self.assertEquals(cur.fetchall()[0][0], "a")
@@ -198,17 +204,18 @@ class AsyncTests(ConnectingTestCase):
         self.assertTrue(self.conn.isexecuting())
 
         # getting transaction status works
-        self.assertEquals(self.conn.info.transaction_status,
-                          ext.TRANSACTION_STATUS_ACTIVE)
+        self.assertEquals(
+            self.conn.info.transaction_status, ext.TRANSACTION_STATUS_ACTIVE
+        )
         self.assertTrue(self.conn.isexecuting())
 
         # setting connection encoding should fail
-        self.assertRaises(psycopg2.ProgrammingError,
-                          self.conn.set_client_encoding, "LATIN1")
+        self.assertRaises(
+            psycopg2.ProgrammingError, self.conn.set_client_encoding, "LATIN1"
+        )
 
         # same for transaction isolation
-        self.assertRaises(psycopg2.ProgrammingError,
-                          self.conn.set_isolation_level, 1)
+        self.assertRaises(psycopg2.ProgrammingError, self.conn.set_isolation_level, 1)
 
     def test_reset_while_async(self):
         cur = self.conn.cursor()
@@ -223,11 +230,13 @@ class AsyncTests(ConnectingTestCase):
 
         cur.execute("begin")
         self.wait(cur)
-        cur.execute("""
+        cur.execute(
+            """
             insert into table1 values (1);
             insert into table1 values (2);
             insert into table1 values (3);
-        """)
+        """
+        )
         self.wait(cur)
         cur.execute("select id from table1 order by id")
 
@@ -236,7 +245,7 @@ class AsyncTests(ConnectingTestCase):
 
         # but after it's done it should work
         self.wait(cur)
-        self.assertEquals(list(cur), [(1, ), (2, ), (3, )])
+        self.assertEquals(list(cur), [(1,), (2,), (3,)])
         self.assertFalse(self.conn.isexecuting())
 
     def test_copy_while_async(self):
@@ -244,28 +253,35 @@ class AsyncTests(ConnectingTestCase):
         cur.execute("select 'a'")
 
         # copy should fail
-        self.assertRaises(psycopg2.ProgrammingError,
-                          cur.copy_from,
-                          StringIO("1\n3\n5\n\\.\n"), "table1")
+        self.assertRaises(
+            psycopg2.ProgrammingError,
+            cur.copy_from,
+            StringIO("1\n3\n5\n\\.\n"),
+            "table1",
+        )
 
     def test_lobject_while_async(self):
         # large objects should be prohibited
-        self.assertRaises(psycopg2.ProgrammingError,
-                          self.conn.lobject)
+        self.assertRaises(psycopg2.ProgrammingError, self.conn.lobject)
 
     def test_async_executemany(self):
         cur = self.conn.cursor()
         self.assertRaises(
             psycopg2.ProgrammingError,
-            cur.executemany, "insert into table1 values (%s)", [1, 2, 3])
+            cur.executemany,
+            "insert into table1 values (%s)",
+            [1, 2, 3],
+        )
 
     def test_async_scroll(self):
         cur = self.conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             insert into table1 values (1);
             insert into table1 values (2);
             insert into table1 values (3);
-        """)
+        """
+        )
         self.wait(cur)
         cur.execute("select id from table1 order by id")
 
@@ -276,7 +292,7 @@ class AsyncTests(ConnectingTestCase):
         # but after it's done it should work
         self.wait(cur)
         cur.scroll(1)
-        self.assertEquals(cur.fetchall(), [(2, ), (3, )])
+        self.assertEquals(cur.fetchall(), [(2,), (3,)])
 
         cur = self.conn.cursor()
         cur.execute("select id from table1 order by id")
@@ -292,20 +308,22 @@ class AsyncTests(ConnectingTestCase):
         self.wait(cur)
         cur.scroll(2)
         cur.scroll(-1)
-        self.assertEquals(cur.fetchall(), [(2, ), (3, )])
+        self.assertEquals(cur.fetchall(), [(2,), (3,)])
 
     def test_scroll(self):
         cur = self.sync_conn.cursor()
         cur.execute("create table table1 (id int)")
-        cur.execute("""
+        cur.execute(
+            """
             insert into table1 values (1);
             insert into table1 values (2);
             insert into table1 values (3);
-        """)
+        """
+        )
         cur.execute("select id from table1 order by id")
         cur.scroll(2)
         cur.scroll(-1)
-        self.assertEquals(cur.fetchall(), [(2, ), (3, )])
+        self.assertEquals(cur.fetchall(), [(2,), (3,)])
 
     def test_async_dont_read_all(self):
         cur = self.conn.cursor()
@@ -335,7 +353,7 @@ class AsyncTests(ConnectingTestCase):
         for mb in 1, 5, 10, 20, 50:
             size = mb * 1024 * 1024
             stub = PollableStub(self.conn)
-            curs.execute("select %s;", ('x' * size,))
+            curs.execute("select %s;", ("x" * size,))
             self.wait(stub)
             self.assertEqual(size, len(curs.fetchone()[0]))
             if stub.polls.count(ext.POLL_WRITE) > 1:
@@ -374,8 +392,7 @@ class AsyncTests(ConnectingTestCase):
                 time.sleep(0.5)
                 continue
             self.assertEquals(len(self.sync_conn.notifies), 1)
-            self.assertEquals(self.sync_conn.notifies.pop(),
-                              (pid, "test_notify"))
+            self.assertEquals(self.sync_conn.notifies.pop(), (pid, "test_notify"))
             return
         self.fail("No NOTIFY in 2.5 seconds")
 
@@ -393,25 +410,26 @@ class AsyncTests(ConnectingTestCase):
 
     def test_error(self):
         cur = self.conn.cursor()
-        cur.execute("insert into table1 values (%s)", (1, ))
+        cur.execute("insert into table1 values (%s)", (1,))
         self.wait(cur)
-        cur.execute("insert into table1 values (%s)", (1, ))
+        cur.execute("insert into table1 values (%s)", (1,))
         # this should fail
         self.assertRaises(psycopg2.IntegrityError, self.wait, cur)
-        cur.execute("insert into table1 values (%s); "
-                    "insert into table1 values (%s)", (2, 2))
+        cur.execute(
+            "insert into table1 values (%s); " "insert into table1 values (%s)", (2, 2)
+        )
         # this should fail as well (Postgres behaviour)
         self.assertRaises(psycopg2.IntegrityError, self.wait, cur)
         # but this should work
         if crdb_version(self.sync_conn) is None:
-            cur.execute("insert into table1 values (%s)", (2, ))
+            cur.execute("insert into table1 values (%s)", (2,))
             self.wait(cur)
         # and the cursor should be usable afterwards
-        cur.execute("insert into table1 values (%s)", (3, ))
+        cur.execute("insert into table1 values (%s)", (3,))
         self.wait(cur)
         cur.execute("select * from table1 order by id")
         self.wait(cur)
-        self.assertEquals(cur.fetchall(), [(1, ), (2, ), (3, )])
+        self.assertEquals(cur.fetchall(), [(1,), (2,), (3,)])
         cur.execute("delete from table1")
         self.wait(cur)
 
@@ -461,11 +479,12 @@ class AsyncTests(ConnectingTestCase):
     @skip_if_crdb("copy")
     def test_async_connection_error_message(self):
         try:
-            cnn = psycopg2.connect('dbname=thisdatabasedoesntexist', async_=True)
+            cnn = psycopg2.connect("dbname=thisdatabasedoesntexist", async_=True)
             self.wait(cnn)
         except psycopg2.Error as e:
-            self.assertNotEqual(str(e), "asynchronous connection failed",
-                "connection error reason lost")
+            self.assertNotEqual(
+                str(e), "asynchronous connection failed", "connection error reason lost"
+            )
         else:
             self.fail("no exception raised")
 
@@ -482,7 +501,8 @@ class AsyncTests(ConnectingTestCase):
         from select import select
 
         cur = self.conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             select 1;
             do $$
                 begin
@@ -490,7 +510,8 @@ class AsyncTests(ConnectingTestCase):
                 end
             $$ language plpgsql;
             select pg_sleep(1);
-            """)
+            """
+        )
 
         polls = 0
         while True:
@@ -526,8 +547,8 @@ class AsyncTests(ConnectingTestCase):
 
             if self.conn.notifies:
                 n = self.conn.notifies.pop()
-                self.assertEqual(n.channel, 'test')
-                self.assertEqual(n.payload, 'hello')
+                self.assertEqual(n.channel, "test")
+                self.assertEqual(n.payload, "hello")
                 break
             time.sleep(0.1)
         else:

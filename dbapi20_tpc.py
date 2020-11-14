@@ -35,8 +35,8 @@ class TwoPhaseCommitTests(unittest.TestCase):
         # Try some extremes for the transaction ID:
         xid = con.xid(0, "", "")
         self.assertEquals(tuple(xid), (0, "", ""))
-        xid = con.xid(0x7fffffff, "a" * 64, "b" * 64)
-        self.assertEquals(tuple(xid), (0x7fffffff, "a" * 64, "b" * 64))
+        xid = con.xid(0x7FFFFFFF, "a" * 64, "b" * 64)
+        self.assertEquals(tuple(xid), (0x7FFFFFFF, "a" * 64, "b" * 64))
 
     def test_tpc_begin(self):
         con = self.connect()
@@ -102,8 +102,7 @@ class TwoPhaseCommitTests(unittest.TestCase):
 
             cursor = con.cursor()
             cursor.execute("SELECT 1")
-            self.assertRaises(self.driver.ProgrammingError,
-                              con.tpc_begin, xid)
+            self.assertRaises(self.driver.ProgrammingError, con.tpc_begin, xid)
         finally:
             con.close()
 
@@ -114,8 +113,7 @@ class TwoPhaseCommitTests(unittest.TestCase):
 
             cursor = con.cursor()
             cursor.execute("SELECT 1")
-            self.assertRaises(self.driver.ProgrammingError,
-                              con.tpc_begin, xid)
+            self.assertRaises(self.driver.ProgrammingError, con.tpc_begin, xid)
         finally:
             con.close()
 

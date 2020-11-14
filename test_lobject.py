@@ -31,8 +31,15 @@ from functools import wraps
 import psycopg2
 import psycopg2.extensions
 import unittest
-from .testutils import (decorate_all_tests, skip_if_tpc_disabled,
-    skip_before_postgres, ConnectingTestCase, skip_if_green, skip_if_crdb, slow)
+from .testutils import (
+    decorate_all_tests,
+    skip_if_tpc_disabled,
+    skip_before_postgres,
+    ConnectingTestCase,
+    skip_if_green,
+    skip_if_crdb,
+    slow,
+)
 
 
 def skip_if_no_lo(f):
@@ -75,8 +82,7 @@ class LargeObjectTests(LargeObjectTestCase):
         self.assertEqual(lo.mode[0], "w")
 
     def test_connection_needed(self):
-        self.assertRaises(TypeError,
-            psycopg2.extensions.lobject, [])
+        self.assertRaises(TypeError, psycopg2.extensions.lobject, [])
 
     def test_open_non_existent(self):
         # By creating then removing a large object, we get an Oid that
@@ -132,8 +138,7 @@ class LargeObjectTests(LargeObjectTestCase):
         lo = self.conn.lobject()
         lo.close()
 
-        self.assertRaises(psycopg2.OperationalError,
-                          self.conn.lobject, 0, "w", lo.oid)
+        self.assertRaises(psycopg2.OperationalError, self.conn.lobject, 0, "w", lo.oid)
         self.assert_(not self.conn.closed)
 
     def test_import(self):
@@ -168,7 +173,7 @@ class LargeObjectTests(LargeObjectTestCase):
 
         lo = self.conn.lobject(lo.oid)
         x = lo.read(4)
-        self.assertEqual(type(x), type(''))
+        self.assertEqual(type(x), type(""))
         self.assertEqual(x, "some")
         self.assertEqual(lo.read(), " data")
 
@@ -179,7 +184,7 @@ class LargeObjectTests(LargeObjectTestCase):
 
         lo = self.conn.lobject(lo.oid, "rb")
         x = lo.read(4)
-        self.assertEqual(type(x), type(b''))
+        self.assertEqual(type(x), type(b""))
         self.assertEqual(x, b"some")
         self.assertEqual(lo.read(), b" data")
 
@@ -191,7 +196,7 @@ class LargeObjectTests(LargeObjectTestCase):
 
         lo = self.conn.lobject(lo.oid, "rt")
         x = lo.read(4)
-        self.assertEqual(type(x), type(u''))
+        self.assertEqual(type(x), type(u""))
         self.assertEqual(x, u"some")
         self.assertEqual(lo.read(), u" data " + snowman)
 
@@ -206,8 +211,7 @@ class LargeObjectTests(LargeObjectTestCase):
         self.assertEqual(lo.read(4), "some")
         data1 = lo.read()
         # avoid dumping megacraps in the console in case of error
-        self.assert_(data == data1,
-            "%r... != %r..." % (data[:100], data1[:100]))
+        self.assert_(data == data1, "%r... != %r..." % (data[:100], data1[:100]))
 
     def test_seek_tell(self):
         lo = self.conn.lobject()
@@ -360,7 +364,7 @@ class LargeObjectTests(LargeObjectTestCase):
 
     @skip_if_tpc_disabled
     def test_read_after_tpc_commit(self):
-        self.conn.tpc_begin('test_lobject')
+        self.conn.tpc_begin("test_lobject")
         lo = self.conn.lobject()
         self.lo_oid = lo.oid
         self.conn.tpc_commit()
@@ -369,7 +373,7 @@ class LargeObjectTests(LargeObjectTestCase):
 
     @skip_if_tpc_disabled
     def test_read_after_tpc_prepare(self):
-        self.conn.tpc_begin('test_lobject')
+        self.conn.tpc_begin("test_lobject")
         lo = self.conn.lobject()
         self.lo_oid = lo.oid
         self.conn.tpc_prepare()
@@ -399,13 +403,13 @@ def skip_if_no_truncate(f):
     @wraps(f)
     def skip_if_no_truncate_(self):
         if self.conn.info.server_version < 80300:
-            return self.skipTest(
-                "the server doesn't support large object truncate")
+            return self.skipTest("the server doesn't support large object truncate")
 
-        if not hasattr(psycopg2.extensions.lobject, 'truncate'):
+        if not hasattr(psycopg2.extensions.lobject, "truncate"):
             return self.skipTest(
                 "psycopg2 has been built against a libpq "
-                "without large object truncate support.")
+                "without large object truncate support."
+            )
 
         return f(self)
 
@@ -454,10 +458,12 @@ class LargeObjectTruncateTests(LargeObjectTestCase):
 def _has_lo64(conn):
     """Return (bool, msg) about the lo64 support"""
     if conn.info.server_version < 90300:
-        return (False, "server version %s doesn't support the lo64 API"
-                % conn.info.server_version)
+        return (
+            False,
+            "server version %s doesn't support the lo64 API" % conn.info.server_version,
+        )
 
-    if 'lo64' not in psycopg2.__version__:
+    if "lo64" not in psycopg2.__version__:
         return False, "this psycopg build doesn't support the lo64 API"
 
     return True, "this server and build support the lo64 API"
@@ -512,14 +518,19 @@ class LargeObjectNot64Tests(LargeObjectTestCase):
         offset = 1 << 32  # 4gb
         self.assertRaises(
             (OverflowError, psycopg2.InterfaceError, psycopg2.NotSupportedError),
-            lo.seek, offset, 0)
+            lo.seek,
+            offset,
+            0,
+        )
 
     def test_truncate_larger_than_2gb(self):
         lo = self.conn.lobject()
         length = 1 << 32  # 4gb
         self.assertRaises(
             (OverflowError, psycopg2.InterfaceError, psycopg2.NotSupportedError),
-            lo.truncate, length)
+            lo.truncate,
+            length,
+        )
 
 
 def test_suite():

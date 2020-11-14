@@ -48,13 +48,15 @@ class TypesBasicTests(ConnectingTestCase):
 
     def testQuoting(self):
         s = "Quote'this\\! ''ok?''"
-        self.failUnless(self.execute("SELECT %s AS foo", (s,)) == s,
-                        "wrong quoting: " + s)
+        self.failUnless(
+            self.execute("SELECT %s AS foo", (s,)) == s, "wrong quoting: " + s
+        )
 
     def testUnicode(self):
         s = u"Quote'this\\! ''ok?''"
-        self.failUnless(self.execute("SELECT %s AS foo", (s,)) == s,
-                        "wrong unicode quoting: " + s)
+        self.failUnless(
+            self.execute("SELECT %s AS foo", (s,)) == s, "wrong unicode quoting: " + s
+        )
 
     def testNumber(self):
         s = self.execute("SELECT %s AS foo", (1971,))
@@ -70,20 +72,24 @@ class TypesBasicTests(ConnectingTestCase):
 
     def testDecimal(self):
         s = self.execute("SELECT %s AS foo", (decimal.Decimal("19.10"),))
-        self.failUnless(s - decimal.Decimal("19.10") == 0,
-                        "wrong decimal quoting: " + str(s))
+        self.failUnless(
+            s - decimal.Decimal("19.10") == 0, "wrong decimal quoting: " + str(s)
+        )
         s = self.execute("SELECT %s AS foo", (decimal.Decimal("NaN"),))
         self.failUnless(str(s) == "NaN", "wrong decimal quoting: " + str(s))
-        self.failUnless(type(s) == decimal.Decimal,
-                        "wrong decimal conversion: " + repr(s))
+        self.failUnless(
+            type(s) == decimal.Decimal, "wrong decimal conversion: " + repr(s)
+        )
         s = self.execute("SELECT %s AS foo", (decimal.Decimal("infinity"),))
         self.failUnless(str(s) == "NaN", "wrong decimal quoting: " + str(s))
-        self.failUnless(type(s) == decimal.Decimal,
-                        "wrong decimal conversion: " + repr(s))
+        self.failUnless(
+            type(s) == decimal.Decimal, "wrong decimal conversion: " + repr(s)
+        )
         s = self.execute("SELECT %s AS foo", (decimal.Decimal("-infinity"),))
         self.failUnless(str(s) == "NaN", "wrong decimal quoting: " + str(s))
-        self.failUnless(type(s) == decimal.Decimal,
-                        "wrong decimal conversion: " + repr(s))
+        self.failUnless(
+            type(s) == decimal.Decimal, "wrong decimal conversion: " + repr(s)
+        )
 
     def testFloatNan(self):
         try:
@@ -111,7 +117,7 @@ class TypesBasicTests(ConnectingTestCase):
 
     def testBinary(self):
         if PY2:
-            s = ''.join([chr(x) for x in range(256)])
+            s = "".join([chr(x) for x in range(256)])
             b = psycopg2.Binary(s)
             buf = self.execute("SELECT %s::bytea AS foo", (b,))
             self.assertEqual(s, str(buf))
@@ -129,7 +135,7 @@ class TypesBasicTests(ConnectingTestCase):
     def testBinaryEmptyString(self):
         # test to make sure an empty Binary is converted to an empty string
         if PY2:
-            b = psycopg2.Binary('')
+            b = psycopg2.Binary("")
             self.assertEqual(str(b), "''::bytea")
         else:
             b = psycopg2.Binary(bytes([]))
@@ -139,7 +145,7 @@ class TypesBasicTests(ConnectingTestCase):
         # test to make sure buffers returned by psycopg2 are
         # understood by execute:
         if PY2:
-            s = ''.join([chr(x) for x in range(256)])
+            s = "".join([chr(x) for x in range(256)])
             buf = self.execute("SELECT %s::bytea AS foo", (psycopg2.Binary(s),))
             buf2 = self.execute("SELECT %s::bytea AS foo", (buf,))
             self.assertEqual(s, str(buf2))
@@ -153,19 +159,20 @@ class TypesBasicTests(ConnectingTestCase):
     def testArray(self):
         s = self.execute("SELECT %s AS foo", ([[1, 2], [3, 4]],))
         self.failUnlessEqual(s, [[1, 2], [3, 4]])
-        s = self.execute("SELECT %s AS foo", (['one', 'two', 'three'],))
-        self.failUnlessEqual(s, ['one', 'two', 'three'])
+        s = self.execute("SELECT %s AS foo", (["one", "two", "three"],))
+        self.failUnlessEqual(s, ["one", "two", "three"])
 
     @skip_if_crdb("nested array")
     def testEmptyArrayRegression(self):
         # ticket #42
         curs = self.conn.cursor()
         curs.execute(
-            "create table array_test "
-            "(id integer, col timestamp without time zone[])")
+            "create table array_test " "(id integer, col timestamp without time zone[])"
+        )
 
-        curs.execute("insert into array_test values (%s, %s)",
-            (1, [datetime.date(2011, 2, 14)]))
+        curs.execute(
+            "insert into array_test values (%s, %s)", (1, [datetime.date(2011, 2, 14)])
+        )
         curs.execute("select col from array_test where id = 1")
         self.assertEqual(curs.fetchone()[0], [datetime.datetime(2011, 2, 14, 0, 0)])
 
@@ -178,14 +185,14 @@ class TypesBasicTests(ConnectingTestCase):
     def testNestedEmptyArray(self):
         # issue #788
         curs = self.conn.cursor()
-        curs.execute("select 10 = any(%s::int[])", ([[]], ))
+        curs.execute("select 10 = any(%s::int[])", ([[]],))
         self.assertFalse(curs.fetchone()[0])
 
     def testEmptyArrayNoCast(self):
         s = self.execute("SELECT '{}' AS foo")
-        self.assertEqual(s, '{}')
+        self.assertEqual(s, "{}")
         s = self.execute("SELECT %s AS foo", ([],))
-        self.assertEqual(s, '{}')
+        self.assertEqual(s, "{}")
 
     def testEmptyArray(self):
         s = self.execute("SELECT '{}'::text[] AS foo")
@@ -197,7 +204,7 @@ class TypesBasicTests(ConnectingTestCase):
         self.failUnlessEqual(s, "{}")
 
     def testArrayEscape(self):
-        ss = ['', '\\', '"', '\\\\', '\\"']
+        ss = ["", "\\", '"', "\\\\", '\\"']
         for s in ss:
             r = self.execute("SELECT %s AS foo", (s,))
             self.failUnlessEqual(s, r)
@@ -209,41 +216,44 @@ class TypesBasicTests(ConnectingTestCase):
 
     def testArrayMalformed(self):
         curs = self.conn.cursor()
-        ss = ['', '{', '{}}', '{' * 20 + '}' * 20]
+        ss = ["", "{", "{}}", "{" * 20 + "}" * 20]
         for s in ss:
-            self.assertRaises(psycopg2.DataError,
-                psycopg2.extensions.STRINGARRAY, s.encode('utf8'), curs)
+            self.assertRaises(
+                psycopg2.DataError,
+                psycopg2.extensions.STRINGARRAY,
+                s.encode("utf8"),
+                curs,
+            )
 
     def testTextArray(self):
         curs = self.conn.cursor()
         curs.execute("select '{a,b,c}'::text[]")
         x = curs.fetchone()[0]
         self.assert_(isinstance(x[0], str))
-        self.assertEqual(x, ['a', 'b', 'c'])
+        self.assertEqual(x, ["a", "b", "c"])
 
     def testUnicodeArray(self):
-        psycopg2.extensions.register_type(
-            psycopg2.extensions.UNICODEARRAY, self.conn)
+        psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY, self.conn)
         curs = self.conn.cursor()
         curs.execute("select '{a,b,c}'::text[]")
         x = curs.fetchone()[0]
         self.assert_(isinstance(x[0], text_type))
-        self.assertEqual(x, [u'a', u'b', u'c'])
+        self.assertEqual(x, [u"a", u"b", u"c"])
 
     def testBytesArray(self):
-        psycopg2.extensions.register_type(
-            psycopg2.extensions.BYTESARRAY, self.conn)
+        psycopg2.extensions.register_type(psycopg2.extensions.BYTESARRAY, self.conn)
         curs = self.conn.cursor()
         curs.execute("select '{a,b,c}'::text[]")
         x = curs.fetchone()[0]
         self.assert_(isinstance(x[0], bytes))
-        self.assertEqual(x, [b'a', b'b', b'c'])
+        self.assertEqual(x, [b"a", b"b", b"c"])
 
     @skip_if_crdb("nested array")
     @testutils.skip_before_postgres(8, 2)
     def testArrayOfNulls(self):
         curs = self.conn.cursor()
-        curs.execute("""
+        curs.execute(
+            """
             create table na (
               texta text[],
               inta int[],
@@ -252,10 +262,11 @@ class TypesBasicTests(ConnectingTestCase):
               textaa text[][],
               intaa int[][],
               boolaa boolean[][]
-            )""")
+            )"""
+        )
 
         curs.execute("insert into na (texta) values (%s)", ([None],))
-        curs.execute("insert into na (texta) values (%s)", (['a', None],))
+        curs.execute("insert into na (texta) values (%s)", (["a", None],))
         curs.execute("insert into na (texta) values (%s)", ([None, None],))
         curs.execute("insert into na (inta) values (%s)", ([None],))
         curs.execute("insert into na (inta) values (%s)", ([42, None],))
@@ -265,7 +276,7 @@ class TypesBasicTests(ConnectingTestCase):
         curs.execute("insert into na (boola) values (%s)", ([None, None],))
 
         curs.execute("insert into na (textaa) values (%s)", ([[None]],))
-        curs.execute("insert into na (textaa) values (%s)", ([['a', None]],))
+        curs.execute("insert into na (textaa) values (%s)", ([["a", None]],))
         curs.execute("insert into na (textaa) values (%s)", ([[None, None]],))
 
         curs.execute("insert into na (intaa) values (%s)", ([[None]],))
@@ -371,12 +382,12 @@ class TypesBasicTests(ConnectingTestCase):
     def testByteaHexCheckFalsePositive(self):
         # the check \x -> x to detect bad bytea decode
         # may be fooled if the first char is really an 'x'
-        o1 = psycopg2.Binary(b'x')
+        o1 = psycopg2.Binary(b"x")
         o2 = self.execute("SELECT %s::bytea AS foo", (o1,))
-        self.assertEqual(b'x', o2[0])
+        self.assertEqual(b"x", o2[0])
 
     def testNegNumber(self):
-        d1 = self.execute("select -%s;", (decimal.Decimal('-1.0'),))
+        d1 = self.execute("select -%s;", (decimal.Decimal("-1.0"),))
         self.assertEqual(1, d1)
         f1 = self.execute("select -%s;", (-1.0,))
         self.assertEqual(1, f1)
@@ -389,7 +400,7 @@ class TypesBasicTests(ConnectingTestCase):
         a = self.execute("select '{1, 2, 3}'::int4[]")
         self.assertEqual(a, [1, 2, 3])
         a = self.execute("select array['a', 'b', '''']::text[]")
-        self.assertEqual(a, ['a', 'b', "'"])
+        self.assertEqual(a, ["a", "b", "'"])
 
     @testutils.skip_before_postgres(8, 2)
     def testGenericArrayNull(self):
@@ -397,6 +408,7 @@ class TypesBasicTests(ConnectingTestCase):
             if s is None:
                 return "nada"
             return int(s) * 2
+
         base = psycopg2.extensions.new_type((23,), "INT4", caster)
         array = psycopg2.extensions.new_array_type((1007,), "INT4ARRAY", base)
 
@@ -404,18 +416,18 @@ class TypesBasicTests(ConnectingTestCase):
         a = self.execute("select '{1, 2, 3}'::int4[]")
         self.assertEqual(a, [2, 4, 6])
         a = self.execute("select '{1, 2, NULL}'::int4[]")
-        self.assertEqual(a, [2, 4, 'nada'])
+        self.assertEqual(a, [2, 4, "nada"])
 
     @skip_if_crdb("cidr")
     @testutils.skip_before_postgres(8, 2)
     def testNetworkArray(self):
         # we don't know these types, but we know their arrays
         a = self.execute("select '{192.168.0.1/24}'::inet[]")
-        self.assertEqual(a, ['192.168.0.1/24'])
+        self.assertEqual(a, ["192.168.0.1/24"])
         a = self.execute("select '{192.168.0.0/24}'::cidr[]")
-        self.assertEqual(a, ['192.168.0.0/24'])
+        self.assertEqual(a, ["192.168.0.0/24"])
         a = self.execute("select '{10:20:30:40:50:60}'::macaddr[]")
-        self.assertEqual(a, ['10:20:30:40:50:60'])
+        self.assertEqual(a, ["10:20:30:40:50:60"])
 
     @testutils.skip_before_python(3, 4)
     def testIntEnum(self):
@@ -434,6 +446,7 @@ class AdaptSubclassTest(unittest.TestCase):
     def test_adapt_subtype(self):
         class Sub(str):
             pass
+
         s1 = "hel'lo"
         s2 = Sub(s1)
         self.assertEqual(adapt(s1).getquoted(), adapt(s2).getquoted())
@@ -451,7 +464,7 @@ class AdaptSubclassTest(unittest.TestCase):
 
         register_adapter(A, lambda a: AsIs("a"))
         register_adapter(B, lambda b: AsIs("b"))
-        self.assertEqual(b'b', adapt(C()).getquoted())
+        self.assertEqual(b"b", adapt(C()).getquoted())
 
     @testutils.skip_from_python(3)
     @restore_types
@@ -483,16 +496,18 @@ class AdaptSubclassTest(unittest.TestCase):
                 return self
 
             def getquoted(self):
-                return 'bar'
+                return "bar"
 
-        self.assertEqual(adapt(foo((1, 2, 3))).getquoted(), 'bar')
+        self.assertEqual(adapt(foo((1, 2, 3))).getquoted(), "bar")
 
 
 @unittest.skipIf(
-    platform.system() == 'Windows',
-    "Not testing because we are useless with ctypes on Windows")
+    platform.system() == "Windows",
+    "Not testing because we are useless with ctypes on Windows",
+)
 class ByteaParserTest(unittest.TestCase):
     """Unit test for our bytea format parser."""
+
     def setUp(self):
         self._cast = self._import_cast()
 
@@ -522,22 +537,22 @@ class ByteaParserTest(unittest.TestCase):
         self.assertEqual(rv, None)
 
     def test_blank(self):
-        rv = self.cast(b'')
-        self.assertEqual(rv, b'')
+        rv = self.cast(b"")
+        self.assertEqual(rv, b"")
 
     def test_blank_hex(self):
         # Reported as problematic in ticket #48
-        rv = self.cast(b'\\x')
-        self.assertEqual(rv, b'')
+        rv = self.cast(b"\\x")
+        self.assertEqual(rv, b"")
 
     def test_full_hex(self, upper=False):
-        buf = ''.join(("%02x" % i) for i in range(256))
+        buf = "".join(("%02x" % i) for i in range(256))
         if upper:
             buf = buf.upper()
-        buf = '\\x' + buf
-        rv = self.cast(buf.encode('utf8'))
+        buf = "\\x" + buf
+        rv = self.cast(buf.encode("utf8"))
         if PY2:
-            self.assertEqual(rv, ''.join(map(chr, range(256))))
+            self.assertEqual(rv, "".join(map(chr, range(256))))
         else:
             self.assertEqual(rv, bytes(range(256)))
 
@@ -545,25 +560,23 @@ class ByteaParserTest(unittest.TestCase):
         return self.test_full_hex(upper=True)
 
     def test_full_escaped_octal(self):
-        buf = ''.join(("\\%03o" % i) for i in range(256))
-        rv = self.cast(buf.encode('utf8'))
+        buf = "".join(("\\%03o" % i) for i in range(256))
+        rv = self.cast(buf.encode("utf8"))
         if PY2:
-            self.assertEqual(rv, ''.join(map(chr, range(256))))
+            self.assertEqual(rv, "".join(map(chr, range(256))))
         else:
             self.assertEqual(rv, bytes(range(256)))
 
     def test_escaped_mixed(self):
-        buf = ''.join(("\\%03o" % i) for i in range(32))
+        buf = "".join(("\\%03o" % i) for i in range(32))
         buf += string.ascii_letters
-        buf += ''.join('\\' + c for c in string.ascii_letters)
-        buf += '\\\\'
-        rv = self.cast(buf.encode('utf8'))
+        buf += "".join("\\" + c for c in string.ascii_letters)
+        buf += "\\\\"
+        rv = self.cast(buf.encode("utf8"))
         if PY2:
-            tgt = ''.join(map(chr, range(32))) \
-                + string.ascii_letters * 2 + '\\'
+            tgt = "".join(map(chr, range(32))) + string.ascii_letters * 2 + "\\"
         else:
-            tgt = bytes(range(32)) + \
-                (string.ascii_letters * 2 + '\\').encode('ascii')
+            tgt = bytes(range(32)) + (string.ascii_letters * 2 + "\\").encode("ascii")
 
         self.assertEqual(rv, tgt)
 

@@ -26,8 +26,12 @@
 import datetime as dt
 import unittest
 from .testutils import (
-    ConnectingTestCase, skip_before_postgres, skip_copy_if_green, StringIO,
-    skip_if_crdb)
+    ConnectingTestCase,
+    skip_before_postgres,
+    skip_copy_if_green,
+    StringIO,
+    skip_if_crdb,
+)
 
 import psycopg2
 from psycopg2 import sql
@@ -37,34 +41,39 @@ from psycopg2.compat import text_type
 class SqlFormatTests(ConnectingTestCase):
     def test_pos(self):
         s = sql.SQL("select {} from {}").format(
-            sql.Identifier('field'), sql.Identifier('table'))
+            sql.Identifier("field"), sql.Identifier("table")
+        )
         s1 = s.as_string(self.conn)
         self.assert_(isinstance(s1, str))
         self.assertEqual(s1, 'select "field" from "table"')
 
     def test_pos_spec(self):
         s = sql.SQL("select {0} from {1}").format(
-            sql.Identifier('field'), sql.Identifier('table'))
+            sql.Identifier("field"), sql.Identifier("table")
+        )
         s1 = s.as_string(self.conn)
         self.assert_(isinstance(s1, str))
         self.assertEqual(s1, 'select "field" from "table"')
 
         s = sql.SQL("select {1} from {0}").format(
-            sql.Identifier('table'), sql.Identifier('field'))
+            sql.Identifier("table"), sql.Identifier("field")
+        )
         s1 = s.as_string(self.conn)
         self.assert_(isinstance(s1, str))
         self.assertEqual(s1, 'select "field" from "table"')
 
     def test_dict(self):
         s = sql.SQL("select {f} from {t}").format(
-            f=sql.Identifier('field'), t=sql.Identifier('table'))
+            f=sql.Identifier("field"), t=sql.Identifier("table")
+        )
         s1 = s.as_string(self.conn)
         self.assert_(isinstance(s1, str))
         self.assertEqual(s1, 'select "field" from "table"')
 
     def test_unicode(self):
         s = sql.SQL(u"select {0} from {1}").format(
-            sql.Identifier(u'field'), sql.Identifier('table'))
+            sql.Identifier(u"field"), sql.Identifier("table")
+        )
         s1 = s.as_string(self.conn)
         self.assert_(isinstance(s1, text_type))
         self.assertEqual(s1, u'select "field" from "table"')
@@ -103,7 +112,7 @@ class SqlFormatTests(ConnectingTestCase):
         self.assertRaises(KeyError, sql.SQL("select {x};").format, 10)
 
     def test_must_be_composable(self):
-        self.assertRaises(TypeError, sql.SQL("select {0};").format, 'foo')
+        self.assertRaises(TypeError, sql.SQL("select {0};").format, "foo")
         self.assertRaises(TypeError, sql.SQL("select {0};").format, 10)
 
     def test_no_modifiers(self):
@@ -114,66 +123,84 @@ class SqlFormatTests(ConnectingTestCase):
         class Foo(object):
             pass
 
-        self.assertRaises(psycopg2.ProgrammingError,
-            sql.SQL("select {0};").format(sql.Literal(Foo())).as_string, self.conn)
+        self.assertRaises(
+            psycopg2.ProgrammingError,
+            sql.SQL("select {0};").format(sql.Literal(Foo())).as_string,
+            self.conn,
+        )
 
     def test_execute(self):
         cur = self.conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             create table test_compose (
                 id serial primary key,
                 foo text, bar text, "ba'z" text)
-            """)
+            """
+        )
         cur.execute(
             sql.SQL("insert into {0} (id, {1}) values (%s, {2})").format(
-                sql.Identifier('test_compose'),
-                sql.SQL(', ').join(map(sql.Identifier, ['foo', 'bar', "ba'z"])),
-                (sql.Placeholder() * 3).join(', ')),
-            (10, 'a', 'b', 'c'))
+                sql.Identifier("test_compose"),
+                sql.SQL(", ").join(map(sql.Identifier, ["foo", "bar", "ba'z"])),
+                (sql.Placeholder() * 3).join(", "),
+            ),
+            (10, "a", "b", "c"),
+        )
 
         cur.execute("select * from test_compose")
-        self.assertEqual(cur.fetchall(), [(10, 'a', 'b', 'c')])
+        self.assertEqual(cur.fetchall(), [(10, "a", "b", "c")])
 
     def test_executemany(self):
         cur = self.conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             create table test_compose (
                 id serial primary key,
                 foo text, bar text, "ba'z" text)
-            """)
+            """
+        )
         cur.executemany(
             sql.SQL("insert into {0} (id, {1}) values (%s, {2})").format(
-                sql.Identifier('test_compose'),
-                sql.SQL(', ').join(map(sql.Identifier, ['foo', 'bar', "ba'z"])),
-                (sql.Placeholder() * 3).join(', ')),
-            [(10, 'a', 'b', 'c'), (20, 'd', 'e', 'f')])
+                sql.Identifier("test_compose"),
+                sql.SQL(", ").join(map(sql.Identifier, ["foo", "bar", "ba'z"])),
+                (sql.Placeholder() * 3).join(", "),
+            ),
+            [(10, "a", "b", "c"), (20, "d", "e", "f")],
+        )
 
         cur.execute("select * from test_compose")
-        self.assertEqual(cur.fetchall(),
-            [(10, 'a', 'b', 'c'), (20, 'd', 'e', 'f')])
+        self.assertEqual(cur.fetchall(), [(10, "a", "b", "c"), (20, "d", "e", "f")])
 
     @skip_if_crdb("copy")
     @skip_copy_if_green
     @skip_before_postgres(8, 2)
     def test_copy(self):
         cur = self.conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             create table test_compose (
                 id serial primary key,
                 foo text, bar text, "ba'z" text)
-            """)
+            """
+        )
 
         s = StringIO("10\ta\tb\tc\n20\td\te\tf\n")
         cur.copy_expert(
             sql.SQL("copy {t} (id, foo, bar, {f}) from stdin").format(
-                t=sql.Identifier("test_compose"), f=sql.Identifier("ba'z")), s)
+                t=sql.Identifier("test_compose"), f=sql.Identifier("ba'z")
+            ),
+            s,
+        )
 
         s1 = StringIO()
         cur.copy_expert(
             sql.SQL("copy (select {f} from {t} order by id) to stdout").format(
-                t=sql.Identifier("test_compose"), f=sql.Identifier("ba'z")), s1)
+                t=sql.Identifier("test_compose"), f=sql.Identifier("ba'z")
+            ),
+            s1,
+        )
         s1.seek(0)
-        self.assertEqual(s1.read(), 'c\nf\n')
+        self.assertEqual(s1.read(), "c\nf\n")
 
 
 class IdentifierTests(ConnectingTestCase):
@@ -181,21 +208,22 @@ class IdentifierTests(ConnectingTestCase):
         self.assert_(issubclass(sql.Identifier, sql.Composable))
 
     def test_init(self):
-        self.assert_(isinstance(sql.Identifier('foo'), sql.Identifier))
-        self.assert_(isinstance(sql.Identifier(u'foo'), sql.Identifier))
-        self.assert_(isinstance(sql.Identifier('foo', 'bar', 'baz'), sql.Identifier))
+        self.assert_(isinstance(sql.Identifier("foo"), sql.Identifier))
+        self.assert_(isinstance(sql.Identifier(u"foo"), sql.Identifier))
+        self.assert_(isinstance(sql.Identifier("foo", "bar", "baz"), sql.Identifier))
         self.assertRaises(TypeError, sql.Identifier)
         self.assertRaises(TypeError, sql.Identifier, 10)
         self.assertRaises(TypeError, sql.Identifier, dt.date(2016, 12, 31))
 
     def test_strings(self):
-        self.assertEqual(sql.Identifier('foo').strings, ('foo',))
-        self.assertEqual(sql.Identifier('foo', 'bar').strings, ('foo', 'bar'))
+        self.assertEqual(sql.Identifier("foo").strings, ("foo",))
+        self.assertEqual(sql.Identifier("foo", "bar").strings, ("foo", "bar"))
 
         # Legacy method
-        self.assertEqual(sql.Identifier('foo').string, 'foo')
-        self.assertRaises(AttributeError,
-            getattr, sql.Identifier('foo', 'bar'), 'string')
+        self.assertEqual(sql.Identifier("foo").string, "foo")
+        self.assertRaises(
+            AttributeError, getattr, sql.Identifier("foo", "bar"), "string"
+        )
 
     def test_repr(self):
         obj = sql.Identifier("fo'o")
@@ -203,26 +231,27 @@ class IdentifierTests(ConnectingTestCase):
         self.assertEqual(repr(obj), str(obj))
 
         obj = sql.Identifier("fo'o", 'ba"r')
-        self.assertEqual(repr(obj), 'Identifier("fo\'o", \'ba"r\')')
+        self.assertEqual(repr(obj), "Identifier(\"fo'o\", 'ba\"r')")
         self.assertEqual(repr(obj), str(obj))
 
     def test_eq(self):
-        self.assert_(sql.Identifier('foo') == sql.Identifier('foo'))
-        self.assert_(sql.Identifier('foo', 'bar') == sql.Identifier('foo', 'bar'))
-        self.assert_(sql.Identifier('foo') != sql.Identifier('bar'))
-        self.assert_(sql.Identifier('foo') != 'foo')
-        self.assert_(sql.Identifier('foo') != sql.SQL('foo'))
+        self.assert_(sql.Identifier("foo") == sql.Identifier("foo"))
+        self.assert_(sql.Identifier("foo", "bar") == sql.Identifier("foo", "bar"))
+        self.assert_(sql.Identifier("foo") != sql.Identifier("bar"))
+        self.assert_(sql.Identifier("foo") != "foo")
+        self.assert_(sql.Identifier("foo") != sql.SQL("foo"))
 
     def test_as_str(self):
+        self.assertEqual(sql.Identifier("foo").as_string(self.conn), '"foo"')
         self.assertEqual(
-            sql.Identifier('foo').as_string(self.conn), '"foo"')
+            sql.Identifier("foo", "bar").as_string(self.conn), '"foo"."bar"'
+        )
         self.assertEqual(
-            sql.Identifier('foo', 'bar').as_string(self.conn), '"foo"."bar"')
-        self.assertEqual(
-            sql.Identifier("fo'o", 'ba"r').as_string(self.conn), '"fo\'o"."ba""r"')
+            sql.Identifier("fo'o", 'ba"r').as_string(self.conn), '"fo\'o"."ba""r"'
+        )
 
     def test_join(self):
-        self.assert_(not hasattr(sql.Identifier('foo'), 'join'))
+        self.assert_(not hasattr(sql.Identifier("foo"), "join"))
 
 
 class LiteralTests(ConnectingTestCase):
@@ -230,15 +259,14 @@ class LiteralTests(ConnectingTestCase):
         self.assert_(issubclass(sql.Literal, sql.Composable))
 
     def test_init(self):
-        self.assert_(isinstance(sql.Literal('foo'), sql.Literal))
-        self.assert_(isinstance(sql.Literal(u'foo'), sql.Literal))
-        self.assert_(isinstance(sql.Literal(b'foo'), sql.Literal))
+        self.assert_(isinstance(sql.Literal("foo"), sql.Literal))
+        self.assert_(isinstance(sql.Literal(u"foo"), sql.Literal))
+        self.assert_(isinstance(sql.Literal(b"foo"), sql.Literal))
         self.assert_(isinstance(sql.Literal(42), sql.Literal))
-        self.assert_(isinstance(
-            sql.Literal(dt.date(2016, 12, 31)), sql.Literal))
+        self.assert_(isinstance(sql.Literal(dt.date(2016, 12, 31)), sql.Literal))
 
     def test_wrapped(self):
-        self.assertEqual(sql.Literal('foo').wrapped, 'foo')
+        self.assertEqual(sql.Literal("foo").wrapped, "foo")
 
     def test_repr(self):
         self.assertEqual(repr(sql.Literal("foo")), "Literal('foo')")
@@ -246,21 +274,22 @@ class LiteralTests(ConnectingTestCase):
         self.assertQuotedEqual(sql.Literal("foo").as_string(self.conn), "'foo'")
         self.assertEqual(sql.Literal(42).as_string(self.conn), "42")
         self.assertEqual(
-            sql.Literal(dt.date(2017, 1, 1)).as_string(self.conn),
-            "'2017-01-01'::date")
+            sql.Literal(dt.date(2017, 1, 1)).as_string(self.conn), "'2017-01-01'::date"
+        )
 
     def test_eq(self):
-        self.assert_(sql.Literal('foo') == sql.Literal('foo'))
-        self.assert_(sql.Literal('foo') != sql.Literal('bar'))
-        self.assert_(sql.Literal('foo') != 'foo')
-        self.assert_(sql.Literal('foo') != sql.SQL('foo'))
+        self.assert_(sql.Literal("foo") == sql.Literal("foo"))
+        self.assert_(sql.Literal("foo") != sql.Literal("bar"))
+        self.assert_(sql.Literal("foo") != "foo")
+        self.assert_(sql.Literal("foo") != sql.SQL("foo"))
 
     def test_must_be_adaptable(self):
         class Foo(object):
             pass
 
-        self.assertRaises(psycopg2.ProgrammingError,
-            sql.Literal(Foo()).as_string, self.conn)
+        self.assertRaises(
+            psycopg2.ProgrammingError, sql.Literal(Foo()).as_string, self.conn
+        )
 
 
 class SQLTests(ConnectingTestCase):
@@ -268,13 +297,13 @@ class SQLTests(ConnectingTestCase):
         self.assert_(issubclass(sql.SQL, sql.Composable))
 
     def test_init(self):
-        self.assert_(isinstance(sql.SQL('foo'), sql.SQL))
-        self.assert_(isinstance(sql.SQL(u'foo'), sql.SQL))
+        self.assert_(isinstance(sql.SQL("foo"), sql.SQL))
+        self.assert_(isinstance(sql.SQL(u"foo"), sql.SQL))
         self.assertRaises(TypeError, sql.SQL, 10)
         self.assertRaises(TypeError, sql.SQL, dt.date(2016, 12, 31))
 
     def test_string(self):
-        self.assertEqual(sql.SQL('foo').string, 'foo')
+        self.assertEqual(sql.SQL("foo").string, "foo")
 
     def test_repr(self):
         self.assertEqual(repr(sql.SQL("foo")), "SQL('foo')")
@@ -282,10 +311,10 @@ class SQLTests(ConnectingTestCase):
         self.assertEqual(sql.SQL("foo").as_string(self.conn), "foo")
 
     def test_eq(self):
-        self.assert_(sql.SQL('foo') == sql.SQL('foo'))
-        self.assert_(sql.SQL('foo') != sql.SQL('bar'))
-        self.assert_(sql.SQL('foo') != 'foo')
-        self.assert_(sql.SQL('foo') != sql.Literal('foo'))
+        self.assert_(sql.SQL("foo") == sql.SQL("foo"))
+        self.assert_(sql.SQL("foo") != sql.SQL("bar"))
+        self.assert_(sql.SQL("foo") != "foo")
+        self.assert_(sql.SQL("foo") != sql.Literal("foo"))
 
     def test_sum(self):
         obj = sql.SQL("foo") + sql.SQL("bar")
@@ -305,12 +334,14 @@ class SQLTests(ConnectingTestCase):
 
     def test_join(self):
         obj = sql.SQL(", ").join(
-            [sql.Identifier('foo'), sql.SQL('bar'), sql.Literal(42)])
+            [sql.Identifier("foo"), sql.SQL("bar"), sql.Literal(42)]
+        )
         self.assert_(isinstance(obj, sql.Composed))
         self.assertEqual(obj.as_string(self.conn), '"foo", bar, 42')
 
         obj = sql.SQL(", ").join(
-            sql.Composed([sql.Identifier('foo'), sql.SQL('bar'), sql.Literal(42)]))
+            sql.Composed([sql.Identifier("foo"), sql.SQL("bar"), sql.Literal(42)])
+        )
         self.assert_(isinstance(obj, sql.Composed))
         self.assertEqual(obj.as_string(self.conn), '"foo", bar, 42')
 
@@ -324,12 +355,13 @@ class ComposedTest(ConnectingTestCase):
 
     def test_repr(self):
         obj = sql.Composed([sql.Literal("foo"), sql.Identifier("b'ar")])
-        self.assertEqual(repr(obj),
-            """Composed([Literal('foo'), Identifier("b'ar")])""")
+        self.assertEqual(
+            repr(obj), """Composed([Literal('foo'), Identifier("b'ar")])"""
+        )
         self.assertEqual(str(obj), repr(obj))
 
     def test_seq(self):
-        l = [sql.SQL('foo'), sql.Literal('bar'), sql.Identifier('baz')]
+        l = [sql.SQL("foo"), sql.Literal("bar"), sql.Identifier("baz")]
         self.assertEqual(sql.Composed(l).seq, l)
 
     def test_eq(self):
@@ -363,12 +395,12 @@ class ComposedTest(ConnectingTestCase):
         self.assertQuotedEqual(obj.as_string(self.conn), "foo 'bar'")
 
     def test_iter(self):
-        obj = sql.Composed([sql.SQL("foo"), sql.SQL('bar')])
+        obj = sql.Composed([sql.SQL("foo"), sql.SQL("bar")])
         it = iter(obj)
         i = next(it)
-        self.assertEqual(i, sql.SQL('foo'))
+        self.assertEqual(i, sql.SQL("foo"))
         i = next(it)
-        self.assertEqual(i, sql.SQL('bar'))
+        self.assertEqual(i, sql.SQL("bar"))
         self.assertRaises(StopIteration, next, it)
 
 
@@ -378,28 +410,28 @@ class PlaceholderTest(ConnectingTestCase):
 
     def test_name(self):
         self.assertEqual(sql.Placeholder().name, None)
-        self.assertEqual(sql.Placeholder('foo').name, 'foo')
+        self.assertEqual(sql.Placeholder("foo").name, "foo")
 
     def test_repr(self):
-        self.assert_(str(sql.Placeholder()), 'Placeholder()')
-        self.assert_(repr(sql.Placeholder()), 'Placeholder()')
-        self.assert_(sql.Placeholder().as_string(self.conn), '%s')
+        self.assert_(str(sql.Placeholder()), "Placeholder()")
+        self.assert_(repr(sql.Placeholder()), "Placeholder()")
+        self.assert_(sql.Placeholder().as_string(self.conn), "%s")
 
     def test_repr_name(self):
-        self.assert_(str(sql.Placeholder('foo')), "Placeholder('foo')")
-        self.assert_(repr(sql.Placeholder('foo')), "Placeholder('foo')")
-        self.assert_(sql.Placeholder('foo').as_string(self.conn), '%(foo)s')
+        self.assert_(str(sql.Placeholder("foo")), "Placeholder('foo')")
+        self.assert_(repr(sql.Placeholder("foo")), "Placeholder('foo')")
+        self.assert_(sql.Placeholder("foo").as_string(self.conn), "%(foo)s")
 
     def test_bad_name(self):
-        self.assertRaises(ValueError, sql.Placeholder, ')')
+        self.assertRaises(ValueError, sql.Placeholder, ")")
 
     def test_eq(self):
-        self.assert_(sql.Placeholder('foo') == sql.Placeholder('foo'))
-        self.assert_(sql.Placeholder('foo') != sql.Placeholder('bar'))
-        self.assert_(sql.Placeholder('foo') != 'foo')
+        self.assert_(sql.Placeholder("foo") == sql.Placeholder("foo"))
+        self.assert_(sql.Placeholder("foo") != sql.Placeholder("bar"))
+        self.assert_(sql.Placeholder("foo") != "foo")
         self.assert_(sql.Placeholder() == sql.Placeholder())
-        self.assert_(sql.Placeholder('foo') != sql.Placeholder())
-        self.assert_(sql.Placeholder('foo') != sql.Literal('foo'))
+        self.assert_(sql.Placeholder("foo") != sql.Placeholder())
+        self.assert_(sql.Placeholder("foo") != sql.Literal("foo"))
 
 
 class ValuesTest(ConnectingTestCase):
