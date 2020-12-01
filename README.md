@@ -8,7 +8,7 @@ The number of tests currently in this test suite is close to:
 
     grep 'def test' *.py | wc -l
 
-Visual progress is tracked [in a spreadsheet][sheet].
+Visual progress is tracked [in a spreadsheet][sheet] online.
 
 ![tests to go](https://docs.google.com/spreadsheets/d/e/2PACX-1vSIjr8UbGoF1BE9fOJkanoUWe7-aDjm0HvpdxJDA0PEddpU0bGVtQkSSjtdEr2MRzAFawNXBfgn5MyK/pubchart?oid=889461505&amp;format=image "tests to go")
 
